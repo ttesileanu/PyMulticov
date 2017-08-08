@@ -93,11 +93,14 @@ class BinaryAlignment(object):
         if not isinstance(other, BinaryAlignment):
             return False
 
-        my_data = sparse.csr_matrix(self.data)
-        other_data = sparse.csr_matrix(other.data)
-        diff_data = np.abs(my_data - other_data)
-        if diff_data.max() > 1e-8:
+        if np.shape(self.data) != np.shape(other.data):
             return False
+        if np.size(self.data) > 0:
+            my_data = sparse.csr_matrix(self.data)
+            other_data = sparse.csr_matrix(other.data)
+            diff_data = np.abs(my_data - other_data)
+            if diff_data.max() > 1e-8:
+                return False
 
         if not self.annotations.equals(other.annotations):
             return False
