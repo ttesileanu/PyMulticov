@@ -269,17 +269,6 @@ class Alignment(object):
 
         return result
 
-    def to_binary(self):
-        """ Return a binary alignment representation of `self`.
-    
-        When a single alphabet is in use, a binary alignment is essentially a sparse matrix m such that
-        m(k, Nl*i + a) == 1 iff sequence k has letter a at position i, where Nl is the number of letters in the
-        alphabet. If the alignment has several alphabets, the corresponding binary alignments are concatenated.
-        """
-
-        from binary import BinaryAlignment
-        return BinaryAlignment.from_alignment(self)
-
     def update_sequence_weights(self, threshold):
         """ Estimate sequence weights for the alignment, using the given `threshold`. """
         nalign = self.to_int(as_matrix=True)

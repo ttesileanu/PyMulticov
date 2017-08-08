@@ -445,7 +445,6 @@ class TestAnnotations(unittest.TestCase):
         self.assertTrue(np.all(bin_align.annotations['seqw'] == 1))
 
 
-# XXX these are essentially the same as the tests from test_alignment
 class TestFromAlignment(unittest.TestCase):
     def test_empty(self):
         from alignment import Alignment, ReferenceMapping

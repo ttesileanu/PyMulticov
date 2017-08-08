@@ -629,60 +629,6 @@ class TestUpdateSequenceWeights(unittest.TestCase):
         self.assertTrue(np.allclose(align.annotations['seqw'], expected_seqw))
 
 
-class TestToBinary(unittest.TestCase):
-    def test_empty(self):
-        from alignment import Alignment, ReferenceMapping
-        bin_align = Alignment().to_binary()
-        self.assertTrue(hasattr(bin_align, 'data'))
-        self.assertTrue(hasattr(bin_align, 'alphabets'))
-        self.assertTrue(hasattr(bin_align, 'reference'))
-        self.assertTrue(hasattr(bin_align, 'annotations'))
-        self.assertEqual(np.size(bin_align.data), 0)
-        self.assertEqual(np.size(bin_align.alphabets), 0)
-        self.assertEqual(bin_align.annotations.size, 0)
-        self.assertEqual(bin_align.reference, ReferenceMapping())
-
-    def test_rna_example(self):
-        from alignment import Alignment
-        from binary import BinaryAlignment
-        from alphabet import rna_alphabet
-        align = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
-        bin_align = align.to_binary()
-        expected = BinaryAlignment([
-            [1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0],
-            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]], rna_alphabet)
-        self.assertEqual(bin_align, expected)
-
-    def test_multi_alpha(self):
-        from alignment import Alignment, ReferenceMapping
-        from alphabet import protein_alphabet, rna_alphabet
-        align1 = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
-        align2 = Alignment(['DF', 'YA', '-C'], alphabet=protein_alphabet)
-
-        align = Alignment(align1).add(align2)
-        align.reference = ReferenceMapping((list(range(1, 4)), list(range(2))))
-        align.annotations['seqw'] = [0.5, 1.5, 0.2]
-
-        bin_align = align.to_binary()
-
-        expected1 = np.asmatrix([[1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
-                                 [0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0],
-                                 [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]])
-        #                         A  C  D  E  F  G  H  I  K  L  M  N  P  Q  R  S  T  V  W  Y
-        expected2 = np.asmatrix([[0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                  0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-                                  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                  0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
-
-        self.assertSequenceEqual(bin_align.alphabets, [(rna_alphabet, 3), (protein_alphabet, 2)])
-        self.assertTrue(np.array_equal(bin_align.data.todense(), np.hstack((expected1, expected2))))
-        self.assertIs(bin_align.reference, align.reference)
-        self.assertIs(bin_align.annotations, align.annotations)
-
-
 class TestReferenceMapping(unittest.TestCase):
     def test_empty_align(self):
         from alignment import Alignment, ReferenceMapping
