@@ -1,4 +1,12 @@
 import alphabet
-from alphabet import *
+import alignment
+import binary
+import align_io
 
-__all__ = ['alphabet']
+from alphabet import *
+from alignment import *
+from binary import *
+from align_io import *
+
+__package__ = 'multicov'
+__all__ = ['alphabet', 'alignment', 'binary', 'align_io']
