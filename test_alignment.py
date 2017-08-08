@@ -45,6 +45,7 @@ class TestConstructor(unittest.TestCase):
         from alphabet import dna_alphabet
         align1 = Alignment(['AA', 'T-', 'CG', 'TT'], dna_alphabet)
         align2 = Alignment(align1)
+        self.assertIsNot(align1, align2)
         self.assertEqual(align1, align2)
 
     def test_changing_copy_leaves_original_unchanged(self):
@@ -645,8 +646,8 @@ class TestToBinary(unittest.TestCase):
         from alignment import Alignment
         from binary import BinaryAlignment
         from alphabet import rna_alphabet
-        alignment = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
-        bin_align = alignment.to_binary()
+        align = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        bin_align = align.to_binary()
         expected = BinaryAlignment([
             [1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
             [0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0],
