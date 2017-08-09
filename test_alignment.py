@@ -200,6 +200,24 @@ class TestTruncateColumns(unittest.TestCase):
         expected.reference = ReferenceMapping([0, 3, 5, 7])
         self.assertEqual(subalign, expected)
 
+    def test_with_mask(self):
+        from alignment import Alignment, ReferenceMapping
+        from alphabet import protein_alphabet
+        align = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-'], protein_alphabet)
+        subalign = align.truncate_columns([True, False, True, True, False, False, False, True])
+        expected = Alignment(['IGGQ', '-GGQ', 'IG--'], protein_alphabet)
+        expected.reference = ReferenceMapping([0, 2, 3, 7])
+        self.assertEqual(subalign, expected)
+
+    def test_in_place(self):
+        from alignment import Alignment, ReferenceMapping
+        from alphabet import protein_alphabet
+        align = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-'], protein_alphabet)
+        align.truncate_columns([0, 3, 5, 7], in_place=True)
+        expected = Alignment(['IGTQ', '-GEQ', 'I-D-'], protein_alphabet)
+        expected.reference = ReferenceMapping([0, 3, 5, 7])
+        self.assertEqual(align, expected)
+
     def test_multi_alpha_select_single_alpha_example(self):
         from alignment import Alignment, ReferenceMapping
         from alphabet import rna_alphabet, dna_alphabet

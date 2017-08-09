@@ -78,7 +78,7 @@ class TestFilterRows(unittest.TestCase):
     def test_on_empty(self):
         from alignment import Alignment
         from filtering import filter_rows
-        align1 =  Alignment()
+        align1 = Alignment()
         align2 = filter_rows(Alignment())
         self.assertEqual(align1, align2)
 
@@ -150,3 +150,91 @@ class TestFilterRows(unittest.TestCase):
 
         self.assertEqual(len(align_clean), 3)
         self.assertIsNot(align_clean, align)
+
+
+class TestAlignToSequence(unittest.TestCase):
+    def test_on_empty(self):
+        from alignment import Alignment
+        from filtering import align_to_sequence
+        align = Alignment()
+        align_to_sequence(align, 'ACC')
+        self.assertEqual(align, Alignment())
+
+    def test_dna(self):
+        from alignment import Alignment
+        from alphabet import dna_alphabet
+        from filtering import align_to_sequence
+        align = Alignment(['AA-T', 'ACGT', '--GG', 'A-GG', 'GGC-'], dna_alphabet)
+        align_to_sequence(align, 'AAT')
+        self.assertEqual(len(align.reference.seqs), 1)
+        self.assertSequenceEqual(list(align.reference.seqs[0]), [0, 1, None, 2])
+
+    def test_with_list(self):
+        from alignment import Alignment
+        from alphabet import rna_alphabet
+        from filtering import align_to_sequence
+        align = Alignment(['AA-U', 'ACGU', '--GG', 'A-GG', 'GGC-'], rna_alphabet)
+        align_to_sequence(align, ['A', 'A', 'U'])
+        self.assertEqual(len(align.reference.seqs), 1)
+        self.assertSequenceEqual(list(align.reference.seqs[0]), [0, 1, None, 2])
+
+    def test_with_truncate(self):
+        from alignment import Alignment
+        from alphabet import rna_alphabet
+        from filtering import align_to_sequence
+        align = Alignment(['AA-U', 'ACGU', '--GG', 'A-GG', 'GGC-'], rna_alphabet)
+        align_to_sequence(align, 'AGG', truncate=True)
+        expected = Alignment(['A-U', 'AGU', '-GG', 'AGG', 'GC-'], rna_alphabet)
+        self.assertEqual(align, expected)
+
+    def test_with_longer_refseq(self):
+        from alignment import Alignment
+        from alphabet import rna_alphabet
+        from filtering import align_to_sequence
+        align = Alignment(['AA-U', 'ACGU', '--GG', 'A-GG', 'GGC-'], rna_alphabet)
+        align_to_sequence(align, 'GUAACCGUU')
+        self.assertEqual(len(align.reference.seqs), 1)
+        self.assertSequenceEqual(list(align.reference.seqs[0]), [3, 5, 6, 8])
+
+    def test_with_imperfect_match(self):
+        from alignment import Alignment
+        from alphabet import protein_alphabet
+        from filtering import align_to_sequence
+        align = Alignment(['-AWGGH', 'D-GG-A', 'WWGYPD', 'W--IIK', '--FDGH'], protein_alphabet)
+        align_to_sequence(align, 'AWCWGYPPCY')
+        self.assertEqual(len(align.reference.seqs), 1)
+        self.assertSequenceEqual(list(align.reference.seqs[0]), [1, 3, 4, 5, 6, 7])
+
+    def test_details_index(self):
+        from alignment import Alignment
+        from alphabet import rna_alphabet
+        from filtering import align_to_sequence
+        align = Alignment(['AG-U', 'ACGU', '--GG', 'A-GG', 'GGC-'], rna_alphabet)
+        details = align_to_sequence(align, 'GUAACCGUU')
+        self.assertEqual(details['idx'], 1)
+
+    def test_details_align_accuracy(self):
+        from alignment import Alignment
+        from alphabet import protein_alphabet
+        from filtering import align_to_sequence
+        align = Alignment(['-AWGGH', 'D-GG-A', 'WWGYPD', 'W--IIK', '--FDGH'], protein_alphabet)
+        details = align_to_sequence(align, 'AWCWGYPPCY')
+        self.assertAlmostEqual(details['align_accuracy'], 5/6)
+
+    def test_ref_idx_names(self):
+        from alignment import Alignment
+        from alphabet import dna_alphabet
+        from filtering import align_to_sequence
+        align = Alignment(['AA-G', 'ACGT', '--GG', 'A-GG', 'GGC-'], dna_alphabet)
+        align_to_sequence(align, 'GTAACCGTT', ref_idx_names=['1', '2', '3', '3a', '4', '5', 8, 9, 9.5])
+        self.assertEqual(len(align.reference.seqs), 1)
+        self.assertSequenceEqual(list(align.reference.seqs[0]), ['3a', '5', 8, 9.5])
+
+    def test_force_idx(self):
+        from alignment import Alignment
+        from alphabet import rna_alphabet
+        from filtering import align_to_sequence
+        align = Alignment(['AA-U', 'ACGU', '--GG', 'A-GG', 'GGC-'], rna_alphabet)
+        align_to_sequence(align, 'GUAACCGUU', force_idx=0)
+        self.assertEqual(len(align.reference.seqs), 1)
+        self.assertSequenceEqual(list(align.reference.seqs[0]), [2, 3, None, 8])

@@ -159,18 +159,27 @@ class Alignment(object):
 
         return self
 
-    def truncate_columns(self, cols):
+    def truncate_columns(self, cols, in_place=False):
         """ Generate a new alignment containing only the columns in the `cols` argument. This should be a sequence even
-        if a single column is to be kept. """
+        if a single column is to be kept.
+
+        The change can also be done in-place, by setting `in_place` to `True`. """
 
         cols = np.asarray(cols)
+        if cols.dtype == bool:
+            cols = cols.nonzero()[0]
         if np.any(cols < 0) or np.any(cols >= self.data.shape[1]):
             raise IndexError('Out-of-range indices in truncate_columns.')
 
-        result = Alignment()
+        if not in_place:
+            result = Alignment()
+        else:
+            result = None
+
         alpha_end_list = np.cumsum([_[1] for _ in self.alphabets])
         alpha_start_list = np.hstack(([0], alpha_end_list[:-1]))
         new_ref_seqs = []
+        res_alphabets = []
         for alpha_info, alpha_start, alpha_end, ref_seq in zip(
                 self.alphabets, alpha_start_list, alpha_end_list, self.reference.seqs):
             mask = (cols >= alpha_start) & (cols < alpha_end)
@@ -180,11 +189,18 @@ class Alignment(object):
                 if np.any(np.diff(crt_col_idxs) != 1):
                     raise IndexError('Attempt to split alphabet columns in two disjoint sets in truncate_columns.')
                 crt_cols = cols[crt_col_idxs]
-                result.alphabets.append((alpha_info[0], n_crt))
+                res_alphabets.append((alpha_info[0], n_crt))
                 new_ref_seqs.append(np.asarray(ref_seq)[crt_cols - alpha_start])
-        result.reference = ReferenceMapping(new_ref_seqs)
-        result.data = self.data[:, cols]
-        result.annotations = self.annotations.copy()
+
+        if not in_place:
+            result.alphabets = res_alphabets
+            result.reference = ReferenceMapping(new_ref_seqs)
+            result.data = self.data[:, cols]
+            result.annotations = self.annotations.copy()
+        else:
+            self.alphabets = res_alphabets
+            self.data = self.data[:, cols]
+            self.reference = ReferenceMapping(new_ref_seqs)
 
         return result
 

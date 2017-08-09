@@ -1,5 +1,5 @@
 from alphabet import protein_alphabet, dna_alphabet, rna_alphabet
-from alignment import Alignment
+from alignment import Alignment, ReferenceMapping
 
 import numpy as np
 
@@ -7,7 +7,30 @@ from Bio import pairwise2
 from Bio.SubsMat import MatrixInfo
 
 
-def search(align, seq, move_to_top=False, substitution_matrix=None, gap_open=-10, gap_extend=-0.5):
+def _get_substitution_matrix(alphabet):
+    """ Return a tuple with default parameters `(substitution_matrix, gap_open, gap_extend) for the given alphabet. """
+    if alphabet == protein_alphabet:
+        return (MatrixInfo.blosum50, -10, -0.5)
+    elif alphabet == dna_alphabet:
+        return ({
+            ('A', 'A'): 5,
+            ('C', 'A'): -4, ('C', 'C'): 5,
+            ('G', 'A'): -4, ('G', 'C'): -4, ('G', 'G'): 5,
+            ('T', 'A'): -4, ('T', 'C'): -4, ('T', 'G'): -4, ('T', 'T'): 5
+        }, -2, -0.5)
+    elif alphabet == rna_alphabet:
+        return ({
+            ('A', 'A'): 5,
+            ('C', 'A'): -4, ('C', 'C'): 5,
+            ('G', 'A'): -4, ('G', 'C'): -4, ('G', 'G'): 5,
+            ('U', 'A'): -4, ('U', 'C'): -4, ('U', 'G'): -4, ('U', 'U'): 5
+        }, -2, -0.5)
+    else:
+        raise ValueError('explicit substitution_matrix missing on alignment with alphabet that is not protein, dna,'
+                         ' or rna')
+
+
+def search(align, seq, move_to_top=False, substitution_matrix=None, gap_open=None, gap_extend=None):
     """ Searches for the best match to the given sequence in the given alignment, and returns its index.
 
     If `move_to_top == True`, the sequence is swapped with the first alignment sequence. The return value remains
@@ -26,28 +49,13 @@ def search(align, seq, move_to_top=False, substitution_matrix=None, gap_open=-10
     if len(seq) == 0:
         raise ValueError('search with empty sequence.')
 
-    if substitution_matrix is None:
-        if align.alphabets[0][0] == protein_alphabet:
-            substitution_matrix = MatrixInfo.blosum50
-        elif align.alphabets[0][0] == dna_alphabet:
-            substitution_matrix = {
-                ('A', 'A'): 5,
-                ('C', 'A'): -4, ('C', 'C'): 5,
-                ('G', 'A'): -4, ('G', 'C'): -4, ('G', 'G'): 5,
-                ('T', 'A'): -4, ('T', 'C'): -4, ('T', 'G'): -4, ('T', 'T'): 5
-            }
-        elif align.alphabets[0][0] == rna_alphabet:
-            substitution_matrix = {
-                ('A', 'A'): 5,
-                ('C', 'A'): -4, ('C', 'C'): 5,
-                ('G', 'A'): -4, ('G', 'C'): -4, ('G', 'G'): 5,
-                ('U', 'A'): -4, ('U', 'C'): -4, ('U', 'G'): -4, ('U', 'U'): 5
-            }
-        else:
-            raise ValueError('explicit substitution_matrix missing on alignment with alphabet that is not protein, dna,'
-                             ' or rna')
-
     alphabet = align.alphabets[0][0]
+    if substitution_matrix is None:
+        substitution_matrix, default_gap_open, default_gap_extend = _get_substitution_matrix(alphabet)
+        if gap_open is None:
+            gap_open = default_gap_open
+        if gap_extend is None:
+            gap_extend = default_gap_extend
 
     # make sure the sequence is a string
     seq = ''.join(seq)
@@ -60,7 +68,7 @@ def search(align, seq, move_to_top=False, substitution_matrix=None, gap_open=-10
     scores = []
     for i, align_seq in enumerate(align_seqs):
         scores.append(pairwise2.align.globalds(seq, align_seq, substitution_matrix,
-                                               gap_open, gap_extend, one_alignment_only=1, score_only=1))
+                                               gap_open, gap_extend, one_alignment_only=True, score_only=True))
 
     # find the highest scoring sequence
     best_id = np.argmax(scores)
@@ -89,3 +97,73 @@ def filter_rows(align, max_gaps=0.5):
     mask = (gap_fractions <= max_gaps)
 
     return align[mask]
+
+
+def align_to_sequence(align, seq, ref_idx_names=None, truncate=False, force_idx=None):
+    """ Set the reference mapping for the alignment according to the given sequence.
+
+    By default, the function searches for the best match to `seq` within the alignment, and uses this match to infer a
+    mapping between alignment columns and positions in `seq`. Columns that do not match any position in `seq` are marked
+    with `None`. If `truncate` is `True`, the columns that do not have a match in `seq` are removed.
+
+    If `force_idx` is set, the search is not done, and only the sequence at that position is used for the matching.
+
+    By default, the positions in `seq` are numbered consecutively, starting from 0. If `ref_idx_names` is given,
+    position `i` in `seq` will have name `ref_idx_names[i]`, and these names will be used in the reference mapping that
+    will be attached to the alignment.
+
+    Currently this only works for single alphabet alignments, and the alphabet needs to be protein, DNA, or RNA.
+    """
+    if len(align) == 0:
+        # nothing to do
+        return align
+
+    if len(align.alphabets) > 1:
+        raise ValueError('align_to_sequence not implemented on multi-alphabet alignments.')
+
+    alphabet = align.alphabets[0][0]
+    substitution_matrix, gap_open, gap_extend = _get_substitution_matrix(alphabet)
+    if force_idx is None:
+        # find the best matching sequence
+        force_idx = search(align, seq, substitution_matrix=substitution_matrix,
+                           gap_open=gap_open, gap_extend=gap_extend)
+
+    # find the best match
+    gap_ch = alphabet[0]
+    # need the alignment sequence without gaps
+    align_seq = np.asarray(align.data[force_idx])[0]
+    align_gap_mask = (align_seq == gap_ch)
+    align_seq_no_gaps = align_seq[~align_gap_mask]
+    align_seq_no_gaps_as_str = ''.join(align_seq_no_gaps)
+
+    seq = ''.join(seq)
+    p_al = pairwise2.align.globalds(seq, align_seq_no_gaps_as_str, substitution_matrix, gap_open, gap_extend)
+
+    # this will be the mapping from indices in alignment to indices in `seq`
+    ref_idxs = np.asarray([None for _ in range(len(align_seq))])
+    # the ungapped positions in p_al[0][0] correspond to positions in the reference sequence
+    # let's label them
+    p_al_ref_idxs = np.asarray([None for _ in range(len(p_al[0][0]))])
+    p_al_ref_idxs[np.asarray(list(p_al[0][0])) != gap_ch] = list(range(len(seq)))
+    # now the ungapped positions in p_al[0][1] correspond to ungapped positions in the alignment sequence
+    ref_idxs[~align_gap_mask] = p_al_ref_idxs[np.asarray(list(p_al[0][1])) != gap_ch]
+
+    # calculate some details
+    details = {'align_accuracy': np.mean(
+                    [a == b for a, b in zip(p_al[0][0], p_al[0][1]) if a != gap_ch and b != gap_ch]),
+               'idx': force_idx}
+
+    # do we want to truncate the alignment?
+    if truncate:
+        truncate_mask = (ref_idxs != None)
+        align.truncate_columns(truncate_mask, in_place=True)
+        ref_idxs = ref_idxs[truncate_mask]
+
+    if ref_idx_names is not None:
+        ref_seq = [ref_idx_names[_] for _ in ref_idxs if _ is not None]
+    else:
+        ref_seq = ref_idxs
+
+    align.reference = ReferenceMapping(list(ref_seq))
+
+    return details
