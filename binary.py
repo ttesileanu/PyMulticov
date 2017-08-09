@@ -1,6 +1,6 @@
 """ This file defines the binary alignment class. """
 
-from alignment import ReferenceMapping
+from multicov.alignment import ReferenceMapping
 
 from scipy import sparse
 

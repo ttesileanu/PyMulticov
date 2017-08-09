@@ -1,6 +1,6 @@
 """ Define input-output routines for alignments. """
 
-from alignment import Alignment
+from multicov.alignment import Alignment
 
 import numpy as np
 

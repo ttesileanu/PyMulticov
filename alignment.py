@@ -1,12 +1,13 @@
 """ This file defines the alignment class, as well as a reference mapping object. """
 
+from multicov.alphabet import NumericAlphabet
+
 import numpy as np
 import pandas as pd
 
 import copy
 
 from scipy.spatial import distance
-
 
 class Alignment(object):
     """ An alignment is a list of sequences that are aligned. The sequences can be drawn from a single alphabet, or can be
@@ -223,8 +224,6 @@ class Alignment(object):
 
         Usually an `Alignment` object is returned, but if `as_matrix` is set to `True`, the result will be a matrix.
         This matches the `data` member of the alignment that would be generated with `single_chunk == True """
-
-        from alphabet import NumericAlphabet
 
         if as_matrix:
             result = None

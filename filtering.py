@@ -1,5 +1,5 @@
-from alphabet import protein_alphabet, dna_alphabet, rna_alphabet
-from alignment import Alignment, ReferenceMapping
+from multicov.alphabet import protein_alphabet, dna_alphabet, rna_alphabet
+from multicov.alignment import Alignment, ReferenceMapping
 
 import numpy as np
 

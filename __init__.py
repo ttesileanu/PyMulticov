@@ -1,14 +1,14 @@
-import alphabet
-import alignment
-import binary
-import align_io
-import filtering
+from multicov import alphabet
+from multicov import alignment
+from multicov import binary
+from multicov import align_io
+from multicov import filtering
 
-from alphabet import *
-from alignment import *
-from binary import *
-from align_io import *
-from filtering import *
+from multicov.alphabet import *
+from multicov.alignment import *
+from multicov.binary import *
+from multicov.align_io import *
+from multicov.filtering import *
 
 __package__ = 'multicov'
-__all__ = ['alphabet', 'alignment', 'binary', 'align_io']
+__all__ = ['alphabet', 'alignment', 'binary', 'align_io', 'filtering']
