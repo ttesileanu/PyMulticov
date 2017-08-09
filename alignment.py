@@ -58,7 +58,7 @@ class Alignment(object):
         else:
             sub_align = Alignment()
             # XXX should these be copied by reference instead?
-            sub_align.data = np.copy(self.data[idx, :])
+            sub_align.data = np.matrix(self.data[idx, :], copy=True)
             sub_align.alphabets = copy.copy(self.alphabets)
             sub_align.reference = ReferenceMapping(self.reference)
             if not hasattr(idx, '__getitem__') and type(idx) is not slice:

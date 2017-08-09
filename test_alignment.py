@@ -119,6 +119,14 @@ class TestGetItem(unittest.TestCase):
         subalign = Alignment(['FFH-', '---D'], protein_alphabet)
         self.assertEqual(align[1:], subalign)
 
+    def test_select_rows_keeps_data_as_matrix(self):
+        from alignment import Alignment
+        from alphabet import protein_alphabet
+        align = Alignment(['ACCW', 'FFH-', '---D'], protein_alphabet)
+        subalign = align[1:]
+        self.assertEqual(np.ndim(subalign.data), 2)
+        self.assertEqual(np.ndim(subalign.data[0]), 2)
+
     def test_get_row_with_annotations(self):
         from alignment import Alignment
         from alphabet import rna_alphabet
