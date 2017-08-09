@@ -9,6 +9,7 @@ import copy
 
 from scipy.spatial import distance
 
+
 class Alignment(object):
     """ An alignment is a list of sequences that are aligned. The sequences can be drawn from a single alphabet, or can be
     a collection of subsequences from different alphabets (e.g., a protein sequence and an RNA sequence).

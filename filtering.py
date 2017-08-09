@@ -10,7 +10,7 @@ from Bio.SubsMat import MatrixInfo
 def _get_substitution_matrix(alphabet):
     """ Return a tuple with default parameters `(substitution_matrix, gap_open, gap_extend) for the given alphabet. """
     if alphabet == protein_alphabet:
-        return (MatrixInfo.blosum50, -10, -0.5)
+        return MatrixInfo.blosum50, -10, -0.5
     elif alphabet == dna_alphabet:
         return ({
             ('A', 'A'): 5,
@@ -155,6 +155,7 @@ def align_to_sequence(align, seq, ref_idx_names=None, truncate=False, force_idx=
 
     # do we want to truncate the alignment?
     if truncate:
+        # noinspection PyComparisonWithNone,PyPep8
         truncate_mask = (ref_idxs != None)
         align.truncate_columns(truncate_mask, in_place=True)
         ref_idxs = ref_idxs[truncate_mask]
