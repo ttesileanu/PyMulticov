@@ -164,6 +164,12 @@ class TestGetItem(unittest.TestCase):
         expected = np.asarray([['T', 'A', 'C'], ['-', '-', 'G']])
         self.assertTrue(np.array_equal(subdata, expected))
 
+    def test_selecting_empty_removes_annots_refmap_alpha(self):
+        from alignment import Alignment
+        from alphabet import dna_alphabet
+        align = Alignment(['ATACAT', 'GATACA', 'AA--GG'], dna_alphabet)
+        self.assertEqual(align[[]], Alignment())
+
     def test_raise_on_empty(self):
         from alignment import Alignment
         with self.assertRaises(IndexError):
@@ -271,6 +277,15 @@ class TestComparison(unittest.TestCase):
         align = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-'], protein_alphabet)
         self.assertFalse(Alignment() == align)
         self.assertTrue(Alignment() != align)
+
+    def test_equality_of_empties(self):
+        """ Empty matrices can have different shapes. Make sure that they all count as equal. """
+        from alignment import Alignment, ReferenceMapping
+        from alphabet import protein_alphabet
+        align = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-'], protein_alphabet)
+        sub_align = align[[]]
+        sub_align.reference = ReferenceMapping()
+        self.assertEqual(Alignment(), sub_align)
 
     def test_equal_self(self):
         from alignment import Alignment

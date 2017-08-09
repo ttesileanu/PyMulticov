@@ -50,6 +50,8 @@ class Alignment(object):
             return len(self.data)
 
     def __getitem__(self, idx):
+        if len(self) == 0:
+            raise IndexError('__getitem__ on empty alignment.')
         if isinstance(idx, tuple):
             if len(idx) > 2:
                 raise TypeError('Alignment indices must be at most two-dimensional.')
@@ -59,12 +61,15 @@ class Alignment(object):
             sub_align = Alignment()
             # XXX should these be copied by reference instead?
             sub_align.data = np.matrix(self.data[idx, :], copy=True)
-            sub_align.alphabets = copy.copy(self.alphabets)
-            sub_align.reference = ReferenceMapping(self.reference)
-            if not hasattr(idx, '__getitem__') and type(idx) is not slice:
-                idx = [idx]
-            sub_align.annotations = self.annotations.iloc[idx].copy()
-            sub_align.annotations.reset_index(drop=True, inplace=True)
+            if np.size(sub_align.data) > 0:
+                sub_align.alphabets = copy.copy(self.alphabets)
+                sub_align.reference = ReferenceMapping(self.reference)
+                if not hasattr(idx, '__getitem__') and type(idx) is not slice:
+                    idx = [idx]
+                sub_align.annotations = self.annotations.iloc[idx].copy()
+                sub_align.annotations.reset_index(drop=True, inplace=True)
+            else:
+                sub_align.data = np.asmatrix([])
             return sub_align
 
     def __repr__(self):
@@ -77,7 +82,9 @@ class Alignment(object):
         if not isinstance(other, Alignment):
             return False
 
-        if not np.array_equal(self.data, other.data):
+        if np.size(self.data) != np.size(other.data):
+            return False
+        if np.size(self.data) > 0 and not np.array_equal(self.data, other.data):
             return False
 
         if not self.annotations.equals(other.annotations):
