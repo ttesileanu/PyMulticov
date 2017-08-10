@@ -84,14 +84,7 @@ def filter_rows(align, max_gaps=0.5):
     """ Return a new alignment where rows that have too many gaps are removed (a fraction larger than max_gaps). """
     if len(align) == 0:
         return Alignment()
-    gap_structure = np.zeros(np.shape(align.data), dtype=bool)
-    start_idx = 0
-    for alpha, width in align.alphabets:
-        if alpha.has_gap:
-            gap_ch = alpha[0]
-            gap_structure[:, start_idx:start_idx+width] = (align.data[:, start_idx:start_idx+width] == gap_ch)
-
-        start_idx += width
+    gap_structure = align.get_gap_structure()
 
     gap_fractions = np.mean(gap_structure, axis=1)
     mask = (gap_fractions <= max_gaps)

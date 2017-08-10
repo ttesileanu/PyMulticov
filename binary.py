@@ -119,6 +119,9 @@ class BinaryAlignment(object):
     def __ne__(self, other):
         return not self == other
 
+    def __repr__(self):
+        return "(" + repr(self.alphabets) + " x " + str(len(self)) + " seqs,\n" + repr(self.data) + ")"
+
 
 def _make_binary_from_mat(m, alphabet):
     """ Create a sparse binary alignment matrix from the given dense matrix, using the given alphabet. Gaps are

@@ -5,7 +5,7 @@ import numpy as np
 
 class TestConstructor(unittest.TestCase):
     def test_make_empty(self):
-        from binary import BinaryAlignment
+        from multicov.binary import BinaryAlignment
         bin_align = BinaryAlignment()
         self.assertTrue(hasattr(bin_align, 'alphabets'))
         self.assertTrue(hasattr(bin_align, 'data'))
@@ -15,9 +15,9 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(len(bin_align.alphabets), 0)
 
     def test_make_from_matrix(self):
-        from binary import BinaryAlignment
-        from alignment import ReferenceMapping
-        from alphabet import rna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alignment import ReferenceMapping
+        from multicov.alphabet import rna_alphabet
         bin_data = np.asmatrix([
             [1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
             [0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0],
@@ -30,8 +30,8 @@ class TestConstructor(unittest.TestCase):
         self.assertTrue(np.array_equal(bin_align.data.todense(), bin_data))
 
     def test_copy(self):
-        from binary import BinaryAlignment
-        from alphabet import dna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import dna_alphabet
         bin_align1 = BinaryAlignment([
             [1, 0, 0, 0, 1, 0, 0, 0],
             [0, 0, 0, 1, 0, 0, 0, 0],
@@ -42,8 +42,8 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(bin_align1, bin_align2)
 
     def test_changing_copy_leaves_original_unchanged(self):
-        from binary import BinaryAlignment
-        from alphabet import protein_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import protein_alphabet
         bin_align1 = BinaryAlignment([
             [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -57,8 +57,8 @@ class TestConstructor(unittest.TestCase):
         self.assertTrue(np.array_equal(bin_align2.annotations['seqw'], [1, 2, 3]))
 
     def test_deep_copy_data(self):
-        from binary import BinaryAlignment
-        from alphabet import NumericAlphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import NumericAlphabet
         bin_align1 = BinaryAlignment([
             [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1]], NumericAlphabet(5))
@@ -66,8 +66,8 @@ class TestConstructor(unittest.TestCase):
         self.assertIsNot(bin_align1.data, bin_align2.data)
 
     def test_trivial_sequence_weights(self):
-        from binary import BinaryAlignment
-        from alphabet import protein_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import protein_alphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -79,9 +79,9 @@ class TestConstructor(unittest.TestCase):
         self.assertTrue(np.allclose(bin_align.annotations['seqw'], 1))
 
     def test_set_default_reference(self):
-        from binary import BinaryAlignment
-        from alignment import ReferenceMapping
-        from alphabet import NumericAlphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alignment import ReferenceMapping
+        from multicov.alphabet import NumericAlphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1]], NumericAlphabet(5))
@@ -90,12 +90,12 @@ class TestConstructor(unittest.TestCase):
 
 class TestLength(unittest.TestCase):
     def test_empty_len(self):
-        from binary import BinaryAlignment
+        from multicov.binary import BinaryAlignment
         self.assertEqual(len(BinaryAlignment()), 0)
 
     def test_nonempty(self):
-        from binary import BinaryAlignment
-        from alphabet import dna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import dna_alphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1]], dna_alphabet)
@@ -104,13 +104,13 @@ class TestLength(unittest.TestCase):
 
 class TestComparison(unittest.TestCase):
     def test_empty(self):
-        from binary import BinaryAlignment
+        from multicov.binary import BinaryAlignment
         self.assertTrue(BinaryAlignment() == BinaryAlignment())
         self.assertFalse(BinaryAlignment() != BinaryAlignment())
 
     def test_empty_vs_not(self):
-        from binary import BinaryAlignment
-        from alphabet import protein_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import protein_alphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -122,8 +122,8 @@ class TestComparison(unittest.TestCase):
         self.assertTrue(BinaryAlignment() != bin_align)
 
     def test_equal_self(self):
-        from binary import BinaryAlignment
-        from alphabet import protein_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import protein_alphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -135,8 +135,8 @@ class TestComparison(unittest.TestCase):
         self.assertFalse(bin_align != bin_align)
 
     def test_equal_self_multi_alpha(self):
-        from binary import BinaryAlignment
-        from alphabet import rna_alphabet, dna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import rna_alphabet, dna_alphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1]], dna_alphabet)
@@ -147,8 +147,8 @@ class TestComparison(unittest.TestCase):
         self.assertFalse(bin_align != bin_align)
 
     def test_unequal_different_alphabets(self):
-        from binary import BinaryAlignment
-        from alphabet import rna_alphabet, dna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import rna_alphabet, dna_alphabet
         bin_data = [
             [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1]]
@@ -158,8 +158,8 @@ class TestComparison(unittest.TestCase):
         self.assertTrue(bin_align1 != bin_align2)
 
     def test_unequal_different_data(self):
-        from binary import BinaryAlignment
-        from alphabet import dna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import dna_alphabet
         bin_align1 = BinaryAlignment([
             [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1]], dna_alphabet)
@@ -170,8 +170,8 @@ class TestComparison(unittest.TestCase):
         self.assertFalse(bin_align1 == bin_align2)
 
     def test_unequal_different_annotations(self):
-        from binary import BinaryAlignment
-        from alphabet import dna_alphabet, rna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import dna_alphabet, rna_alphabet
 
         bin_align1 = BinaryAlignment([
             [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -187,8 +187,8 @@ class TestComparison(unittest.TestCase):
         self.assertFalse(bin_align1 == bin_align2)
 
     def test_unequal_different_alphabet_widths(self):
-        from binary import BinaryAlignment
-        from alphabet import rna_alphabet, dna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import rna_alphabet, dna_alphabet
         bin_align1 = BinaryAlignment([
             [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1]], dna_alphabet)
@@ -208,9 +208,9 @@ class TestComparison(unittest.TestCase):
         self.assertFalse(bin_align1 == bin_align2)
 
     def test_unequal_different_reference(self):
-        from binary import BinaryAlignment
-        from alignment import ReferenceMapping
-        from alphabet import protein_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alignment import ReferenceMapping
+        from multicov.alphabet import protein_alphabet
         bin_align1 = BinaryAlignment([
             [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -227,8 +227,8 @@ class TestComparison(unittest.TestCase):
 
 class TestAdd(unittest.TestCase):
     def test_add_empty(self):
-        from binary import BinaryAlignment
-        from alphabet import dna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import dna_alphabet
         bin_align1 = BinaryAlignment([
             [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1]], dna_alphabet)
@@ -237,8 +237,8 @@ class TestAdd(unittest.TestCase):
         self.assertEqual(bin_align1, bin_align2)
 
     def test_add_to_empty(self):
-        from binary import BinaryAlignment
-        from alphabet import dna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import dna_alphabet
         bin_align1 = BinaryAlignment([
             [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1]], dna_alphabet)
@@ -247,8 +247,8 @@ class TestAdd(unittest.TestCase):
         self.assertEqual(bin_align1, bin_align2)
 
     def test_add_alignment(self):
-        from binary import BinaryAlignment
-        from alphabet import protein_alphabet, dna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import protein_alphabet, dna_alphabet
         bin_align1 = BinaryAlignment([
             [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -278,8 +278,8 @@ class TestAdd(unittest.TestCase):
         ])))
 
     def test_add_array(self):
-        from binary import BinaryAlignment
-        from alphabet import dna_alphabet, rna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import dna_alphabet, rna_alphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
@@ -300,8 +300,8 @@ class TestAdd(unittest.TestCase):
         ])))
 
     def test_return_self(self):
-        from binary import BinaryAlignment
-        from alphabet import dna_alphabet, rna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import dna_alphabet, rna_alphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
@@ -313,8 +313,8 @@ class TestAdd(unittest.TestCase):
         self.assertIs(bin_align, ret_align)
 
     def test_raise_on_add_wrong_length(self):
-        from binary import BinaryAlignment
-        from alphabet import protein_alphabet, rna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import protein_alphabet, rna_alphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -328,8 +328,8 @@ class TestAdd(unittest.TestCase):
                 [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1]], rna_alphabet)
 
     def test_raise_on_add_wrong_width(self):
-        from binary import BinaryAlignment
-        from alphabet import protein_alphabet, rna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import protein_alphabet, rna_alphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -351,9 +351,9 @@ class TestAdd(unittest.TestCase):
             bin_align.add(data[:, :-1], rna_alphabet)
 
     def test_set_default_reference_on_empty(self):
-        from binary import BinaryAlignment
-        from alignment import ReferenceMapping
-        from alphabet import rna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alignment import ReferenceMapping
+        from multicov.alphabet import rna_alphabet
         bin_align = BinaryAlignment()
         bin_align.add([
                 [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -361,8 +361,8 @@ class TestAdd(unittest.TestCase):
         self.assertEqual(bin_align.reference, ReferenceMapping(list(range(4))))
 
     def test_set_default_reference_on_nonempty(self):
-        from binary import BinaryAlignment
-        from alphabet import protein_alphabet, dna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import protein_alphabet, dna_alphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -380,12 +380,12 @@ class TestAdd(unittest.TestCase):
 
 class TestAlphabets(unittest.TestCase):
     def test_empty(self):
-        from binary import BinaryAlignment
+        from multicov.binary import BinaryAlignment
         self.assertEqual(len(BinaryAlignment().alphabets), 0)
 
     def test_single(self):
-        from binary import BinaryAlignment
-        from alphabet import protein_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import protein_alphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -397,8 +397,8 @@ class TestAlphabets(unittest.TestCase):
         self.assertEqual(bin_align.alphabets[0], (protein_alphabet, 2))
 
     def test_multi(self):
-        from binary import BinaryAlignment
-        from alphabet import protein_alphabet, dna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import protein_alphabet, dna_alphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -417,13 +417,13 @@ class TestAlphabets(unittest.TestCase):
 
 class TestAnnotations(unittest.TestCase):
     def test_empty(self):
-        from binary import BinaryAlignment
+        from multicov.binary import BinaryAlignment
         self.assertEqual(BinaryAlignment().annotations.size, 0)
         self.assertIn('seqw', BinaryAlignment().annotations.columns)
 
     def test_matching_length(self):
-        from binary import BinaryAlignment
-        from alphabet import protein_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import protein_alphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -436,8 +436,8 @@ class TestAnnotations(unittest.TestCase):
         self.assertEqual(len(bin_align.annotations), 3)
 
     def test_initially_one(self):
-        from binary import BinaryAlignment
-        from alphabet import dna_alphabet
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import dna_alphabet
         bin_align = BinaryAlignment([
             [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
@@ -447,8 +447,8 @@ class TestAnnotations(unittest.TestCase):
 
 class TestFromAlignment(unittest.TestCase):
     def test_empty(self):
-        from alignment import Alignment, ReferenceMapping
-        from binary import BinaryAlignment
+        from multicov.alignment import Alignment, ReferenceMapping
+        from multicov.binary import BinaryAlignment
         bin_align = BinaryAlignment.from_alignment(Alignment())
         self.assertTrue(hasattr(bin_align, 'data'))
         self.assertTrue(hasattr(bin_align, 'alphabets'))
@@ -460,9 +460,9 @@ class TestFromAlignment(unittest.TestCase):
         self.assertEqual(bin_align.reference, ReferenceMapping())
 
     def test_rna_example(self):
-        from alignment import Alignment
-        from binary import BinaryAlignment
-        from alphabet import rna_alphabet
+        from multicov.alignment import Alignment
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import rna_alphabet
         align = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
         bin_align = BinaryAlignment.from_alignment(align)
         expected = BinaryAlignment([
@@ -472,9 +472,9 @@ class TestFromAlignment(unittest.TestCase):
         self.assertEqual(bin_align, expected)
 
     def test_multi_alpha(self):
-        from alignment import Alignment, ReferenceMapping
-        from alphabet import protein_alphabet, rna_alphabet
-        from binary import BinaryAlignment
+        from multicov.alignment import Alignment, ReferenceMapping
+        from multicov.alphabet import protein_alphabet, rna_alphabet
+        from multicov.binary import BinaryAlignment
         align1 = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
         align2 = Alignment(['DF', 'YA', '-C'], alphabet=protein_alphabet)
 
@@ -499,4 +499,3 @@ class TestFromAlignment(unittest.TestCase):
         self.assertTrue(np.array_equal(bin_align.data.todense(), np.hstack((expected1, expected2))))
         self.assertIs(bin_align.reference, align.reference)
         self.assertIs(bin_align.annotations, align.annotations)
-

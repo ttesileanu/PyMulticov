@@ -45,6 +45,7 @@ class Alignment(object):
             self.add(data, alphabet)
 
     def __len__(self):
+        """ Get number of sequences in the alignment. """
         # len returns 1 for empty matrices, so we need to fix it a bit...
         if np.size(self.data) == 0:
             return 0
@@ -52,13 +53,23 @@ class Alignment(object):
             return len(self.data)
 
     def __getitem__(self, idx):
+        """ If used with an index for a single dimension, return a new alignment containing a subset of rows. The index
+        can be an integer location, a slice, or a list.
+
+        If used with a tuple of indices, return a squeezed array (not a matrix!) corresponding to
+        `np.asarray(self.data[idx]).squeeze()`.
+
+        If used with a string, return self.annotations[idx].
+        """
         if len(self) == 0:
             raise IndexError('__getitem__ on empty alignment.')
         if isinstance(idx, tuple):
             if len(idx) > 2:
                 raise TypeError('Alignment indices must be at most two-dimensional.')
 
-            return self.data[idx]
+            return np.asarray(self.data[idx]).squeeze()
+        elif isinstance(idx, str):
+            return self.annotations[idx]
         else:
             sub_align = Alignment()
             # XXX should these be copied by reference instead?
@@ -75,7 +86,7 @@ class Alignment(object):
             return sub_align
 
     def __repr__(self):
-        return "(" + repr(self.alphabets) + ",\n" + repr(self.as_matrix()) + ")"
+        return "(" + repr(self.alphabets) + " x " + str(len(self)) + " seqs,\n" + repr(self.as_matrix()) + ")"
 
     def __eq__(self, other):
         # compare _data, reference, annotations, alphabets
@@ -294,6 +305,9 @@ class Alignment(object):
 
     def update_sequence_weights(self, threshold):
         """ Estimate sequence weights for the alignment, using the given `threshold`. """
+        if len(self) == 0:
+            return self
+
         nalign = self.to_int(as_matrix=True)
         dists = distance.pdist(nalign, 'hamming')
         counts = np.sum(distance.squareform(dists) < (1 - threshold), 1)
@@ -304,6 +318,61 @@ class Alignment(object):
         self.annotations['seqw'] = 1.0 / counts
 
         return self
+
+    def to_binary(self):
+        from multicov.binary import BinaryAlignment
+        return BinaryAlignment.from_alignment(self)
+
+    def eliminate_similar_sequences(self, threshold):
+        """ Trim the alignment by making sure no two sequences are more similar than the given threshold (in terms of
+        1 - Hamming distance normalized by sequence length).
+
+        All pairs of sequences are compared, and a graph is built with the sequences as vertices and an edge between two
+        sequences if they are at least as similar as the threshold. The alignment is then trimmed by keeping a single
+        representative from every connected component. The representative is chosen to have the smallest possible number
+        of gaps; if several such choices exist, an arbitrary one is selected.
+        """
+        # build graph adjacency matrix
+        if len(self) == 0:
+            return self
+
+        from scipy.spatial import distance
+        from scipy import sparse
+        seq_dists = distance.pdist(self.to_int(as_matrix=True), 'hamming')
+        adjacency_matrix = sparse.csr_matrix((distance.squareform(seq_dists) < (1 - threshold)))
+
+        # find connect components
+        n_seq_comps, seq_labels = sparse.csgraph.connected_components(adjacency_matrix, directed=False)
+
+        # choose representatives
+        trimmed_seqs = []
+        mask = np.zeros(len(self), dtype=bool)
+        gap_fractions = np.mean(self.get_gap_structure(), axis=1)
+        for i in range(n_seq_comps):
+            k = (seq_labels == i).nonzero()[0]
+            k_best = k[gap_fractions[k].argmin()]
+            trimmed_seqs.append(self[k_best, :])
+            mask[k_best] = True
+
+        self.data = np.asmatrix(trimmed_seqs)
+        self.annotations = self.annotations.iloc[mask].copy()
+        self.annotations.reset_index(drop=True, inplace=True)
+
+        return self
+
+    def get_gap_structure(self):
+        """ Return a boolean matrix the same size as `self.data` containing `True` at all positions where there are
+        gap characters. """
+        gap_structure = np.zeros(np.shape(self.data), dtype=bool)
+        start_idx = 0
+        for alpha, width in self.alphabets:
+            if alpha.has_gap:
+                gap_ch = alpha[0]
+                gap_structure[:, start_idx:start_idx + width] = (self.data[:, start_idx:start_idx + width] == gap_ch)
+
+            start_idx += width
+
+        return gap_structure
 
 
 class ReferenceMapping(object):
