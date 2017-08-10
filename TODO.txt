@@ -1,0 +1,3 @@
+* alignment method for trimming by removing similar sequences
+* alignment method for adding sequences
+* python/numba memory-conscious code for sequence weights + alignment trimming
