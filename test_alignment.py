@@ -693,6 +693,21 @@ class TestUpdateSequenceWeights(unittest.TestCase):
         expected_seqw = [1, 1, 1, 1.0/3, 1.0/3, 1.0/3, 1.0/3]
         self.assertTrue(np.allclose(align.annotations['seqw'], expected_seqw))
 
+    def test_protein_example_threshold_75_memory_saver_option(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        align = Alignment([
+            'AAAAAAAAAA',
+            'AACDAAAAAA',
+            'A-FGAAAAAA',
+            'CCCCCCCCCC',
+            'CC-CCCCCCC',
+            'CCC-CCCCCC',
+            'CC--CCCCCC'], protein_alphabet)
+        align.update_sequence_weights(0.75, memory_saver=True)
+        expected_seqw = [0.5, 0.5, 1, 0.25, 0.25, 0.25, 0.25]
+        self.assertTrue(np.allclose(align.annotations['seqw'], expected_seqw))
+
 
 class TestReferenceMapping(unittest.TestCase):
     def test_empty_align(self):
@@ -958,3 +973,106 @@ class TestGapStructure(unittest.TestCase):
         from multicov.alphabet import NumericAlphabet
         align = Alignment([[0, 1, 2, 3], [2, 3, 2, 0]], NumericAlphabet(4, has_gap=False))
         self.assertFalse(np.any(align.get_gap_structure()))
+
+
+class TestExtend(unittest.TestCase):
+    def test_add_list_to_empty(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        align1 = Alignment()
+        data = ['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-']
+        align1.extend(data, protein_alphabet)
+        expected = Alignment(data, protein_alphabet)
+        self.assertEqual(align1, expected)
+
+    def test_add_alignment_to_empty(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        align1 = Alignment()
+        align2 = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-'], protein_alphabet)
+        align1.extend(align2)
+        self.assertEqual(align1, align2)
+
+    def test_add_single_alphabet(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        align1 = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-'], protein_alphabet)
+        align2 = Alignment(['-VGGTEAQ', 'IGG-KDT-', 'IVGGYTCQ'], protein_alphabet)
+        align1.extend(align2)
+        expected = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-',
+                              '-VGGTEAQ', 'IGG-KDT-', 'IVGGYTCQ'], protein_alphabet)
+        self.assertEqual(align1, expected)
+
+    def test_add_multi_alphabet(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import dna_alphabet, protein_alphabet
+        align1 = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-'], protein_alphabet).add(
+            ['AGT-', 'C-C-', 'AGAT'], dna_alphabet)
+        align2 = Alignment(['GTEGYTCQ', 'TCQ-VGAQ', 'IGVGADT-'], protein_alphabet).add(
+            ['GAT-', 'CACT', 'A--T'], dna_alphabet)
+        align1.extend(align2)
+        expected = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-',
+                              'GTEGYTCQ', 'TCQ-VGAQ', 'IGVGADT-'], protein_alphabet).add(
+            ['AGT-', 'C-C-', 'AGAT', 'GAT-', 'CACT', 'A--T'], dna_alphabet
+        )
+        self.assertEqual(align1, expected)
+
+    def test_raise_on_different_structure(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import dna_alphabet, protein_alphabet
+        align1 = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-'], protein_alphabet).add(
+            ['AGT-', 'C-C-', 'AGAT'], dna_alphabet)
+        align2 = Alignment(['GTEGYTC', 'TCQ-VGA', 'IGVGADT'], protein_alphabet).add(
+            ['GAT-A', 'CACTA', 'A--TA'], dna_alphabet)
+        with self.assertRaises(ValueError):
+            align1.extend(align2)
+
+    def test_raise_on_different_refseq(self):
+        from multicov.alignment import Alignment, ReferenceMapping
+        from multicov.alphabet import protein_alphabet
+        align1 = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-'], protein_alphabet)
+        align2 = Alignment(['-VGGTEAQ', 'IGG-KDT-', 'IVGGYTCQ'], protein_alphabet)
+        align2.reference = ReferenceMapping([2, 3, 4, 6, 7, 8, 10, 11])
+        with self.assertRaises(ValueError):
+            align1.extend(align2)
+
+    def test_ignore_reference(self):
+        from multicov.alignment import Alignment, ReferenceMapping
+        from multicov.alphabet import protein_alphabet
+        align1 = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-'], protein_alphabet)
+        align2 = Alignment(['-VGGTEAQ', 'IGG-KDT-', 'IVGGYTCQ'], protein_alphabet)
+        align2.reference = ReferenceMapping([2, 3, 4, 6, 7, 8, 10, 11])
+        align1.extend(align2, ignore_reference=True)
+        expected = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-',
+                              '-VGGTEAQ', 'IGG-KDT-', 'IVGGYTCQ'], protein_alphabet)
+        self.assertEqual(align1, expected)
+
+    def test_join_annotations(self):
+        from multicov.alignment import Alignment, ReferenceMapping
+        from multicov.alphabet import protein_alphabet
+        import pandas as pd
+        align1 = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-'], protein_alphabet)
+        align2 = Alignment(['-VGGTEAQ', 'IGG-KDT-', 'IVGGYTCQ'], protein_alphabet)
+        align1.annotations['seqw'] = [0.5, 0.7, 0.9]
+        align2.annotations['seqw'] = [0.3, 1.2, 1.7]
+        align1.annotations['field1'] = ['foo', 'bar', 'z']
+        align2.annotations['field2'] = ['oof', 'rab', 'z']
+        align1.extend(align2)
+        self.assertIn('seqw', align1.annotations.columns)
+        self.assertIn('field1', align1.annotations.columns)
+        self.assertIn('field2', align1.annotations.columns)
+        self.assertTrue(np.allclose(align1.annotations['seqw'], [0.5, 0.7, 0.9, 0.3, 1.2, 1.7]))
+        self.assertSequenceEqual(list(align1.annotations['field1'][:3]), ['foo', 'bar', 'z'])
+        self.assertSequenceEqual(list(align1.annotations['field2'][3:]), ['oof', 'rab', 'z'])
+        self.assertSequenceEqual(list(pd.isnull(align1['field1'])), [False, False, False, True, True, True])
+        self.assertSequenceEqual(list(pd.isnull(align1['field2'])), [True, True, True, False, False, False])
+
+    def test_return_self(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import dna_alphabet, protein_alphabet
+        align1 = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-'], protein_alphabet).add(
+            ['AGT-', 'C-C-', 'AGAT'], dna_alphabet)
+        align2 = Alignment(['GTEGYTCQ', 'TCQ-VGAQ', 'IGVGADT-'], protein_alphabet).add(
+            ['GAT-', 'CACT', 'A--T'], dna_alphabet)
+        ret_val = align1.extend(align2)
+        self.assertIs(ret_val, align1)

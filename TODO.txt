@@ -1,3 +1,2 @@
-* alignment method for trimming by removing similar sequences
-* alignment method for adding sequences
-* python/numba memory-conscious code for sequence weights + alignment trimming
+* make memory_saver option of Alignment.update_sequence_weights use Numba when available
+* python/numba memory-conscious code for alignment trimming

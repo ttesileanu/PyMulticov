@@ -303,17 +303,29 @@ class Alignment(object):
 
         return result
 
-    def update_sequence_weights(self, threshold):
-        """ Estimate sequence weights for the alignment, using the given `threshold`. """
+    def update_sequence_weights(self, threshold, memory_saver=False):
+        """ Estimate sequence weights for the alignment, using the given `threshold`.
+
+        Setting `memory_saver` to `False` calculates the number of sequences within `threshold` of any other sequence in
+        a memory efficient way (for N sequences, memory O(n) is required, as opposed to O(n^2) for the current
+        approach), at the expense of speed (because of not being able to vectorize).
+        """
         if len(self) == 0:
             return self
 
         nalign = self.to_int(as_matrix=True)
-        dists = distance.pdist(nalign, 'hamming')
-        counts = np.sum(distance.squareform(dists) < (1 - threshold), 1)
-
-#        dists_sq = _pdist_cpp.pdist(alignment.as_matrix())
-#        counts = np.sum(dists_sq < (1 - threshold), 1)
+        if not memory_saver:
+            dists = distance.pdist(nalign, 'hamming')
+            counts = np.sum(distance.squareform(dists) < (1 - threshold), 1)
+        else:
+            n = len(self)
+            counts = np.ones(n)
+            threshold_as_count = threshold*self.data.shape[1]
+            for i in range(n):
+                for j in range(i+1, n):
+                    if np.sum(self.data[i] == self.data[j]) >= threshold_as_count:
+                        counts[i] += 1
+                        counts[j] += 1
 
         self.annotations['seqw'] = 1.0 / counts
 
@@ -373,6 +385,54 @@ class Alignment(object):
             start_idx += width
 
         return gap_structure
+
+    def extend(self, data, alphabet=None, ignore_reference=False):
+        """ Add sequences at the bottom of the alignment. This can be used to add sequences from another alignment
+        (when the `alphabet` argument is missing), or to add sequences from a list of strings or matrix, assuming that
+        the data uses the given `alphabet`. In the latter case, sequence weights are automatically extended with 1s for
+        the added sequences, while other annotations are extended with NAs.
+
+        Both the alphabets and their widths, and the reference mapping sequences must match; otherwise `ValueError` is
+        raised. Set `ignore_reference` to `True` to ignore a mismatch in the reference mapping, keeping the `reference`
+        field from the original alignment.
+
+        When adding an alignment, it is possible some annotations are present only in one alignment. The resulting
+        alignment has the union of the columns from the two alignments, with missing values filled with NAs. """
+        if len(self) == 0:
+            # we're adding to nothing; might as well use add
+            self.add(data, alphabet)
+            return self
+
+        if alphabet is None:
+            # we're adding an alignment
+            if len(data) == 0:
+                # it's an empty alignment, so nothing changes
+                return self
+            if data.data.shape[1] != self.data.shape[1]:
+                raise ValueError('Alignment sequences to add have different shape.')
+            if data.alphabets != self.alphabets:
+                raise ValueError('Alignment sequences to add have different alphabet structure.')
+            if not ignore_reference and data.reference != self.reference:
+                raise ValueError('Alignment sequences to add have a different mapping to reference sequence.')
+            self.data = np.vstack((self.data, data.data))
+            self.annotations = self.annotations.append(data.annotations, ignore_index=True)
+        else:
+            # we're adding a matrix/list of sequences
+            if np.size(data) == 0:
+                # it's empty, so nothing changes
+                return self
+            # turn list of strings into matrix
+            if isinstance(data[0], (str, bytes)):
+                data = [list(_) for _ in data]
+            data = np.asarray(data)
+            if data.shape[1] != self.data.shape[1]:
+                raise ValueError('Alignment sequences to add have different shape.')
+            if len(self.alphabets) != 1 or self.alphabets[0][0] != alphabet:
+                raise ValueError('Alignment sequences to add have different alphabet structure.')
+            self.data = np.vstack((self.data, data))
+            self.annotations = self.annotations.append(pd.DataFrame({'seqw': np.ones(len(data))}), ignore_index=True)
+
+        return self
 
 
 class ReferenceMapping(object):
