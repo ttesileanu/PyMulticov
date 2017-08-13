@@ -313,19 +313,20 @@ class Alignment(object):
         if len(self) == 0:
             return self
 
-        nalign = self.to_int(as_matrix=True)
         if not memory_saver:
+            nalign = self.to_int(as_matrix=True)
             dists = distance.pdist(nalign, 'hamming')
             counts = np.sum(distance.squareform(dists) < (1 - threshold), 1)
         else:
             n = len(self)
             counts = np.ones(n)
             threshold_as_count = threshold*self.data.shape[1]
-            for i in range(n):
-                for j in range(i+1, n):
-                    if np.sum(self.data[i] == self.data[j]) >= threshold_as_count:
-                        counts[i] += 1
-                        counts[j] += 1
+            data_as_array = np.asarray(self.data)
+            for i in range(n-1):
+                comparisons = (data_as_array[i] == data_as_array[i+1:])
+                similars = (np.sum(comparisons, axis=1) >= threshold_as_count)
+                counts[i+1:] += similars
+                counts[i] += np.sum(similars)
 
         self.annotations['seqw'] = 1.0 / counts
 
