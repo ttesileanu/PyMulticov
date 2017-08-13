@@ -312,22 +312,34 @@ class Alignment(object):
 
         return result
 
-    def update_sequence_weights(self, threshold, memory_saver=False):
+    def update_sequence_weights(self, threshold, memory_saver=None, no_numba=False):
         """ Estimate sequence weights for the alignment, using the given `threshold`.
 
-        Setting `memory_saver` to `False` calculates the number of sequences within `threshold` of any other sequence in
+        Setting `memory_saver` to `True` calculates the number of sequences within `threshold` of any other sequence in
         a memory efficient way (for N sequences, memory O(n) is required, as opposed to O(n^2) for the current
-        approach), at the expense of speed (because of not being able to vectorize).
+        approach). This is the default if Numba is present because it ends up also being faster (by about 2.5x) compared
+         to the default version (which uses `scipy.spatial.distance.pdist`. Otherwise, using the memory saver option
+         can incur a 2.5x penalty in speed, so when Numba is not installed or when `no_numba` is set to `True`, the
+         default `memory_saver` is `False`.
         """
         if len(self) == 0:
             return self
+
+        if not have_numba:
+            no_numba = True
+        if memory_saver is None:
+            # the Numba routine is actually faster than pdist2, and uses far less memory
+            memory_saver = not no_numba
 
         nalign = self.to_int(as_matrix=True)
         if not memory_saver:
             dists = distance.pdist(nalign, 'hamming')
             counts = np.sum(distance.squareform(dists) < (1 - threshold), 1)
         else:
-            counts = _get_seq_counts_memsave(np.asarray(nalign), threshold)
+            if not no_numba:
+                counts = _get_seq_counts_memsave_numba(np.asarray(nalign), threshold)
+            else:
+                counts = _get_seq_counts_memsave_nonumba(np.asarray(nalign), threshold)
 
         self.annotations['seqw'] = 1.0 / counts
 
@@ -438,7 +450,23 @@ class Alignment(object):
 
 
 @jit_cond
-def _get_seq_counts_memsave(data, threshold):
+def _get_seq_counts_memsave_numba(data, threshold):
+    n = len(data)
+    N = data.shape[1]
+    threshold_as_count = threshold * data.shape[1]
+    counts = np.ones(n)
+    for i in range(n - 1):
+        for j in range(i+1, n):
+            n_eq = 0
+            for k in range(N):
+                n_eq += (data[i, k] == data[j, k])
+            if n_eq >= threshold_as_count:
+                counts[i] += 1
+                counts[j] += 1
+
+    return counts
+
+def _get_seq_counts_memsave_nonumba(data, threshold):
     n = len(data)
     threshold_as_count = threshold * data.shape[1]
     counts = np.ones(n)

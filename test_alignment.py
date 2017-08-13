@@ -660,7 +660,7 @@ class TestUpdateSequenceWeights(unittest.TestCase):
         lucy = loadmat(os.path.join('test_data', 'lucy_dca_pdz_small.mat'),
                        squeeze_me=True)
         alignment = Alignment(lucy['alignment']['data'][()], protein_alphabet)
-        alignment.update_sequence_weights(0.7)
+        alignment.update_sequence_weights(0.7, memory_saver=False)
         self.assertTrue(np.allclose(alignment.annotations['seqw'], lucy['seqw']))
 
     def test_protein_example_threshold_75(self):
@@ -674,7 +674,7 @@ class TestUpdateSequenceWeights(unittest.TestCase):
             'CC-CCCCCCC',
             'CCC-CCCCCC',
             'CC--CCCCCC'], protein_alphabet)
-        align.update_sequence_weights(0.75)
+        align.update_sequence_weights(0.75, memory_saver=False)
         expected_seqw = [0.5, 0.5, 1, 0.25, 0.25, 0.25, 0.25]
         self.assertTrue(np.allclose(align.annotations['seqw'], expected_seqw))
 
@@ -693,7 +693,7 @@ class TestUpdateSequenceWeights(unittest.TestCase):
         expected_seqw = [1, 1, 1, 1.0/3, 1.0/3, 1.0/3, 1.0/3]
         self.assertTrue(np.allclose(align.annotations['seqw'], expected_seqw))
 
-    def test_protein_example_threshold_75_memory_saver_option(self):
+    def test_protein_example_threshold_75_memory_saver_option_with_numba(self):
         from multicov.alignment import Alignment
         from multicov.alphabet import protein_alphabet
         align = Alignment([
@@ -704,7 +704,22 @@ class TestUpdateSequenceWeights(unittest.TestCase):
             'CC-CCCCCCC',
             'CCC-CCCCCC',
             'CC--CCCCCC'], protein_alphabet)
-        align.update_sequence_weights(0.75, memory_saver=True)
+        align.update_sequence_weights(0.75, memory_saver=True, no_numba=False)
+        expected_seqw = [0.5, 0.5, 1, 0.25, 0.25, 0.25, 0.25]
+        self.assertTrue(np.allclose(align.annotations['seqw'], expected_seqw))
+
+    def test_protein_example_threshold_75_memory_saver_option_no_numba(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        align = Alignment([
+            'AAAAAAAAAA',
+            'AACDAAAAAA',
+            'A-FGAAAAAA',
+            'CCCCCCCCCC',
+            'CC-CCCCCCC',
+            'CCC-CCCCCC',
+            'CC--CCCCCC'], protein_alphabet)
+        align.update_sequence_weights(0.75, memory_saver=True, no_numba=True)
         expected_seqw = [0.5, 0.5, 1, 0.25, 0.25, 0.25, 0.25]
         self.assertTrue(np.allclose(align.annotations['seqw'], expected_seqw))
 
