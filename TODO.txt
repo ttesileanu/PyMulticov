@@ -1,2 +1,6 @@
-* make memory_saver option of Alignment.update_sequence_weights use Numba when available
 * python/numba memory-conscious code for alignment trimming
+* stats: freq1, freq2, covmat
+* stats: pseudocount, shrinkage
+* stats: maxentparams from mean field
+* stats: sequence energies from maxentparams
+* stats: change gauge for maxent params, reduce couplings, predict contacts

@@ -9,6 +9,15 @@ import copy
 
 from scipy.spatial import distance
 
+try:
+    from numba import jit
+    jit_cond = jit
+    have_numba = True
+except ModuleNotFoundError:
+    def jit_cond(fct):
+        return fct
+    have_numba = False
+
 
 class Alignment(object):
     """ An alignment is a list of sequences that are aligned. The sequences can be drawn from a single alphabet, or can be
@@ -313,20 +322,12 @@ class Alignment(object):
         if len(self) == 0:
             return self
 
+        nalign = self.to_int(as_matrix=True)
         if not memory_saver:
-            nalign = self.to_int(as_matrix=True)
             dists = distance.pdist(nalign, 'hamming')
             counts = np.sum(distance.squareform(dists) < (1 - threshold), 1)
         else:
-            n = len(self)
-            counts = np.ones(n)
-            threshold_as_count = threshold*self.data.shape[1]
-            data_as_array = np.asarray(self.data)
-            for i in range(n-1):
-                comparisons = (data_as_array[i] == data_as_array[i+1:])
-                similars = (np.sum(comparisons, axis=1) >= threshold_as_count)
-                counts[i+1:] += similars
-                counts[i] += np.sum(similars)
+            counts = _get_seq_counts_memsave(np.asarray(nalign), threshold)
 
         self.annotations['seqw'] = 1.0 / counts
 
@@ -435,6 +436,19 @@ class Alignment(object):
 
         return self
 
+
+@jit_cond
+def _get_seq_counts_memsave(data, threshold):
+    n = len(data)
+    threshold_as_count = threshold * data.shape[1]
+    counts = np.ones(n)
+    for i in range(n - 1):
+        comparisons = (data[i] == data[i + 1:])
+        similars = (np.sum(comparisons, axis=1) >= threshold_as_count)
+        counts[i + 1:] += similars
+        counts[i] += np.sum(similars)
+
+    return counts
 
 class ReferenceMapping(object):
     """ An object holding the mapping between a multi-alphabet sequence and several reference sequences.
