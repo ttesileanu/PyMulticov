@@ -1148,3 +1148,23 @@ class TestExtend(unittest.TestCase):
             ['GAT-', 'CACT', 'A--T'], dna_alphabet)
         ret_val = align1.extend(align2)
         self.assertIs(ret_val, align1)
+
+
+class TestGetWidth(unittest.TestCase):
+    def test_empty(self):
+        from multicov.alignment import Alignment
+        self.assertEqual(Alignment().get_width(), 0)
+
+    def test_protein(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        align = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-'], protein_alphabet)
+        self.assertEqual(align.get_width(), 8)
+
+    def test_multi_alpha(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import rna_alphabet, dna_alphabet
+        align = Alignment(['ATACAT', 'GATACA', 'AA--GG'], dna_alphabet)
+        align2 = Alignment(['AGU-', 'C-C-', 'AGAU'], rna_alphabet)
+        align.add(align2)
+        self.assertEqual(align.get_width(), 10)

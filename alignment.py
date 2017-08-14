@@ -237,6 +237,9 @@ class Alignment(object):
 
         return self.data
 
+    def get_width(self):
+        return self.data.shape[1]
+
     def to_int(self, single_chunk=False, as_matrix=False):
         """ Get a numeric alignment from `self`. If `single_chunk == False` (the default), the structure of the
         alignment is preserved, in the sense that different numeric alphabets are used for each portion of `self` that
