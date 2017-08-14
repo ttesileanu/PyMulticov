@@ -76,6 +76,7 @@ class TestConstructor(unittest.TestCase):
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], protein_alphabet)
         self.assertIn('seqw', bin_align.annotations.columns)
+        # noinspection PyTypeChecker
         self.assertTrue(np.allclose(bin_align.annotations['seqw'], 1))
 
     def test_set_default_reference(self):
@@ -442,6 +443,7 @@ class TestAnnotations(unittest.TestCase):
             [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
             [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]], dna_alphabet)
+        # noinspection PyTypeChecker
         self.assertTrue(np.all(bin_align.annotations['seqw'] == 1))
 
 

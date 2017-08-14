@@ -150,6 +150,7 @@ class Alphabet(object):
         if not np.all(np.isfinite(nseqs)) or np.any(nseqs >= self.size()) or np.any(nseqs < 0):
             raise IndexError("Out of range numbers for alphabet {} in from_int.".format(self.name))
 
+        # noinspection PyTypeChecker
         result = self._letters[nseqs]
 
         if was_1d:

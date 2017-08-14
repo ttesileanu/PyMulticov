@@ -25,6 +25,7 @@ class BinaryAlignment(object):
 
         # length-check, unless this alignment is empty
         old_n_rows = len(self)
+        # noinspection PyUnresolvedReferences
         new_n_rows = len(data) if hasattr(data, 'annotations') else np.shape(data)[0]
         if old_n_rows != 0 and old_n_rows != new_n_rows:
             raise ValueError('Combining binary alignments with different sizes.')
@@ -48,6 +49,7 @@ class BinaryAlignment(object):
                 self.data = sparse.coo_matrix(sparse.hstack((self.data, data)))
 
             n_letters = alphabet.size(no_gap=True)
+            # noinspection PyUnresolvedReferences
             n_binpos = np.shape(data)[1]
             if n_binpos % n_letters != 0:
                 raise ValueError('Binary matrix size is not divisible by alphabet size.')
@@ -136,6 +138,7 @@ def _make_binary_from_mat(m, alphabet):
     i_list = np.array([])
     j_list = np.array([])
     for lett_idx, letter in enumerate(letters):
+        # noinspection PyUnresolvedReferences
         idxs = (m == letter).nonzero()
         i_list = np.hstack((i_list, idxs[0]))
         j_list = np.hstack((j_list, idxs[1]*nletts + lett_idx))

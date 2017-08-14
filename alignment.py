@@ -281,6 +281,7 @@ class Alignment(object):
             return result
 
         # some heuristic to try to guess whether the data is a single data matrix, or a sequence of matrices
+        # noinspection PyUnresolvedReferences
         if np.ndim(ndata[0]) < 2:
             # we seem to be adding only one chunk of data
             ndata = (ndata, )
@@ -489,6 +490,7 @@ def _get_seq_counts_memsave_nonumba(data, threshold):
     counts = np.ones(n)
     for i in range(n - 1):
         comparisons = (data[i] == data[i + 1:])
+        # noinspection PyTypeChecker
         similars = (np.sum(comparisons, axis=1) >= threshold_as_count)
         counts[i + 1:] += similars
         counts[i] += np.sum(similars)
@@ -526,9 +528,11 @@ def _get_seq_sim_graph_memsave_nonumba(data, threshold):
     col_ind = []
     for i in range(n - 1):
         comparisons = (data[i] == data[i + 1:])
+        # noinspection PyTypeChecker
         similars = (np.sum(comparisons, axis=1) >= threshold_as_count).nonzero()[0]
 
         row_ind.extend([i]*len(similars))
+        # noinspection PyTypeChecker
         col_ind.extend((i+1) + similars)
 
     return row_ind, col_ind
@@ -564,6 +568,7 @@ class ReferenceMapping(object):
         if item < 0:
             raise IndexError('Negative index in ReferenceMapping.')
         seq_end = np.cumsum([len(_) for _ in self.seqs])
+        # noinspection PyUnresolvedReferences
         alpha_idx = (item < seq_end).nonzero()[0]
         if len(alpha_idx) == 0:
             raise IndexError('Out-of-range index in ReferenceMapping.')

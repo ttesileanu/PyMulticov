@@ -107,7 +107,9 @@ class TestFilterRows(unittest.TestCase):
         ], protein_alphabet)
         align_clean = filter_rows(align, max_gaps=threshold)
 
+        # noinspection PyTypeChecker
         gap_fraction = np.mean(align.data == '-', axis=1)
+        # noinspection PyTypeChecker
         gap_fraction_clean = np.mean(align_clean.data == '-', axis=1)
 
         self.assertLess(len(align_clean), len(align))

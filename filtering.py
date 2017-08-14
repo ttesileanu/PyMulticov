@@ -148,7 +148,7 @@ def align_to_sequence(align, seq, ref_idx_names=None, truncate=False, force_idx=
 
     # do we want to truncate the alignment?
     if truncate:
-        # noinspection PyComparisonWithNone,PyPep8
+        # noinspection PyComparisonWithNone
         truncate_mask = (ref_idxs != None)
         align.truncate_columns(truncate_mask, in_place=True)
         ref_idxs = ref_idxs[truncate_mask]

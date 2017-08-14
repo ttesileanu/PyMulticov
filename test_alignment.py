@@ -71,6 +71,7 @@ class TestConstructor(unittest.TestCase):
         from multicov.alphabet import protein_alphabet
         align = Alignment(['ACCW', 'FFH-', '---D'], protein_alphabet)
         self.assertIn('seqw', align.annotations.columns)
+        # noinspection PyTypeChecker
         self.assertTrue(np.allclose(align.annotations['seqw'], 1))
 
     def test_set_default_reference(self):
@@ -648,6 +649,7 @@ class TestAnnotations(unittest.TestCase):
         from multicov.alignment import Alignment
         from multicov.alphabet import dna_alphabet
         align = Alignment(['ATACAT', 'GATACA', 'AA--GG', 'AC-T-G'], dna_alphabet)
+        # noinspection PyTypeChecker
         self.assertTrue(np.all(align.annotations['seqw'] == 1))
 
 
