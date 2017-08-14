@@ -1,11 +1,11 @@
 """ Define input-output routines for alignments. """
 
-from multicov.alignment import Alignment
+from multicov.alignment import Alignment, ReferenceMapping
 
 import numpy as np
 
 
-def load_fasta(fname, alphabet, strip_ws_in_annot=True, invalid_letter_policy='uppergap'):
+def load_fasta(fname, alphabet, strip_ws_in_annot=True, invalid_letter_policy='uppergap', mask_fct=None):
     """ Load a FASTA file into an alignment structure.
 
     If `strip_ws_in_annot == True`, whitespace surrounding sequence annotations is removed.
@@ -14,21 +14,24 @@ def load_fasta(fname, alphabet, strip_ws_in_annot=True, invalid_letter_policy='u
         * 'gap', in which all invalid letters are replaced by gaps; this fails if the alphabet is gap-less
         * 'upper', in which lower-case letters are converted to uppercase, without further processing
         * 'uppergap', in which lower-case letters are converted to uppercase, after which the 'gap' policy is applied
+    If `mask_fct` is provided, it is called with the first sequence, `mask_fct(s0)`, and should return a Numpy mask
+    selecting which columns of the alignment to keep. If `mask_fct` is the string 'upper', then the mask is such that
+    columns with lowercase letters or the character '.' in the first sequence are rejected. The string 'uppergap' also
+    rejects gaps, '-'.
     """
     seqs = []
     annots = []
+
     if invalid_letter_policy is None or invalid_letter_policy == 'unchanged':
 
         def process(s):
             return s
-
     elif invalid_letter_policy == 'gap':
         if not alphabet.has_gap:
             raise ValueError("Can't use 'gap' or 'uppergap' policies on gap-less alphabet.")
 
         def process(s):
             return _invalid_to_gap(s, alphabet)
-
     elif invalid_letter_policy == 'upper':
         process = str.upper
     elif invalid_letter_policy == 'uppergap':
@@ -37,13 +40,19 @@ def load_fasta(fname, alphabet, strip_ws_in_annot=True, invalid_letter_policy='u
 
         def process(s):
             return _invalid_to_gap(s.upper(), alphabet)
-
     else:
         raise ValueError('Unknown invalid letter policy {}'.format(str(invalid_letter_policy)))
+
+    if mask_fct == 'upper':
+        mask_fct = lambda s: [not _.islower() and _ != '.' for _ in s]
+    elif mask_fct == 'uppernogap':
+        mask_fct = lambda s: [not _.islower() and _ != '.' and _ != '-' for _ in s]
+
     with open(fname, 'r') as f:
         crt_seq = ''
         width = None
         just_started = True
+        mask = None
         for line in f:
             line = line.strip('\r\n').lstrip()
             if len(line) == 0 or line[0] == ';':
@@ -56,6 +65,8 @@ def load_fasta(fname, alphabet, strip_ws_in_annot=True, invalid_letter_policy='u
                         width = len(crt_seq)
                     elif len(crt_seq) != width:
                         raise ValueError("FASTA sequences don't all have the same length.")
+                    if mask_fct is not None and len(seqs) == 0:
+                        mask = mask_fct(crt_seq)
                     seqs.append(process(crt_seq))
                 elif not just_started:
                     raise ValueError('There should be only one annotation per sequence in FASTA file.')
@@ -74,6 +85,8 @@ def load_fasta(fname, alphabet, strip_ws_in_annot=True, invalid_letter_policy='u
                 raise ValueError("Last FASTA annotation doesn't have a matching sequence.")
             if width is not None and width != len(crt_seq):
                 raise ValueError("FASTA sequences don't all have the same length.")
+            if mask_fct is not None and len(seqs) == 0:
+                mask = mask_fct(crt_seq)
             seqs.append(process(crt_seq))
         else:
             if len(crt_seq) > 0:
@@ -84,6 +97,10 @@ def load_fasta(fname, alphabet, strip_ws_in_annot=True, invalid_letter_policy='u
 
     result = Alignment(seqs, alphabet)
     result.annotations['name'] = annots
+
+    if mask is not None and len(seqs) > 0:
+        result.truncate_columns(mask, in_place=True)
+        result.reference = ReferenceMapping(list(range(result.data.shape[1])))
 
     return result
 

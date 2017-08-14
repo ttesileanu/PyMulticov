@@ -1,6 +1,6 @@
-* python/numba memory-conscious code for alignment trimming
 * stats: freq1, freq2, covmat
 * stats: pseudocount, shrinkage
 * stats: maxentparams from mean field
 * stats: sequence energies from maxentparams
 * stats: change gauge for maxent params, reduce couplings, predict contacts
+% io: make load_fasta faster (in one test it's 5x slower than Matlab version!)

@@ -68,3 +68,57 @@ class TestLoadFasta(unittest.TestCase):
         expected = Alignment(['GATTACA', 'ACCA--T', 'G.C-A-C'], dna_alphabet)
         expected.annotations['name'] = ['one', 'sequence', 'one line']
         self.assertEqual(align, expected)
+
+    def test_mask_from_first_seq(self):
+        from multicov.alignment import Alignment
+        from multicov.align_io import load_fasta
+        from multicov.alphabet import protein_alphabet
+        from numpy import in1d
+        align = load_fasta(os.path.join('test_data', 'test_aln1.fasta'), protein_alphabet,
+                           invalid_letter_policy='unchanged',
+                           mask_fct=lambda s: ~in1d(list(s), ['V', 'G']))
+        expected = Alignment(['IYTCQ', 'XTEAQ', 'IKDT-'], alphabet=protein_alphabet)
+        expected.annotations['name'] = ['seq1', 'seq2', 'seq3']
+        self.assertEqual(align, expected)
+
+    def test_mask_before_process(self):
+        from multicov.alignment import ReferenceMapping
+        from multicov.align_io import load_fasta
+        from multicov.alphabet import protein_alphabet
+        align = load_fasta(os.path.join('test_data', 'test_aln3.fasta'), protein_alphabet,
+                           invalid_letter_policy='upper',
+                           mask_fct=lambda s: [not _.islower() for _ in s])
+        align0 = load_fasta(os.path.join('test_data', 'test_aln3.fasta'), protein_alphabet,
+                            invalid_letter_policy='unchanged')
+        mask = [not _.islower() for _ in align0[0, :]]
+        expected = align0.truncate_columns(mask)
+        expected.reference = ReferenceMapping(list(range(expected.data.shape[1])))
+        self.assertEqual(align, expected)
+
+    def test_mask_upper(self):
+        from multicov.alignment import ReferenceMapping
+        from multicov.align_io import load_fasta
+        from multicov.alphabet import protein_alphabet
+        align = load_fasta(os.path.join('test_data', 'test_aln3.fasta'), protein_alphabet,
+                           invalid_letter_policy='upper',
+                           mask_fct='upper')
+        align0 = load_fasta(os.path.join('test_data', 'test_aln3.fasta'), protein_alphabet,
+                            invalid_letter_policy='unchanged')
+        mask = [not _.islower() and _ != '.' for _ in align0[0, :]]
+        expected = align0.truncate_columns(mask)
+        expected.reference = ReferenceMapping(list(range(expected.data.shape[1])))
+        self.assertEqual(align, expected)
+
+    def test_mask_upper_gap(self):
+        from multicov.alignment import ReferenceMapping
+        from multicov.align_io import load_fasta
+        from multicov.alphabet import protein_alphabet
+        align = load_fasta(os.path.join('test_data', 'test_aln3.fasta'), protein_alphabet,
+                           invalid_letter_policy='upper',
+                           mask_fct='uppernogap')
+        align0 = load_fasta(os.path.join('test_data', 'test_aln3.fasta'), protein_alphabet,
+                            invalid_letter_policy='unchanged')
+        mask = [not _.islower() and _ != '.' and _ != '-' for _ in align0[0, :]]
+        expected = align0.truncate_columns(mask)
+        expected.reference = ReferenceMapping(list(range(expected.data.shape[1])))
+        self.assertEqual(align, expected)
