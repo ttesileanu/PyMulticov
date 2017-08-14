@@ -908,7 +908,7 @@ class TestEliminateSimilarSequences(unittest.TestCase):
             'CC-CCCCCCC',
             'CCC-CCCCCC',
             'CC--CCCCCC'], protein_alphabet)
-        align.eliminate_similar_sequences(0.75)
+        align.eliminate_similar_sequences(0.75, memory_saver=False)
         expected = Alignment([
             'AAAAAAAAAA',
             'A-FGAAAAAA',
@@ -945,7 +945,62 @@ class TestEliminateSimilarSequences(unittest.TestCase):
             'CCCCCCCCCC',
             'CC-CCCCCCC',
             'CCC-CCCCCC'], protein_alphabet)
-        align.eliminate_similar_sequences(0.85)
+        align.eliminate_similar_sequences(0.85, memory_saver=False)
+        expected = Alignment([
+            'A-FGAAAAAA',
+            'AAAAAAAAAA',
+            'AACDAAAAAA',
+            'CCCCCCCCCC'], protein_alphabet)
+        self.assertEqual(align, expected)
+
+    def test_mem_saver(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        align = Alignment([
+            'AAAAAAAAAA',
+            'AACDAAAAAA',
+            'A-FGAAAAAA',
+            'CCCCCCCCCC',
+            'CC-CCCCCCC',
+            'CCC-CCCCCC',
+            'CC--CCCCCC'], protein_alphabet)
+        align.eliminate_similar_sequences(0.75, memory_saver=True)
+        expected = Alignment([
+            'AAAAAAAAAA',
+            'A-FGAAAAAA',
+            'CCCCCCCCCC'], protein_alphabet)
+        self.assertEqual(align, expected)
+
+    def test_mem_saver_nonumba(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        align = Alignment([
+            'AAAAAAAAAA',
+            'AACDAAAAAA',
+            'A-FGAAAAAA',
+            'CCCCCCCCCC',
+            'CC-CCCCCCC',
+            'CCC-CCCCCC',
+            'CC--CCCCCC'], protein_alphabet)
+        align.eliminate_similar_sequences(0.75, memory_saver=True, no_numba=True)
+        expected = Alignment([
+            'AAAAAAAAAA',
+            'A-FGAAAAAA',
+            'CCCCCCCCCC'], protein_alphabet)
+        self.assertEqual(align, expected)
+
+    def test_least_gapped_mem_saver(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        align = Alignment([
+            'A-FGAAAAAA',
+            'AAAAAAAAAA',
+            'AACDAAAAAA',
+            'CC--CCCCCC',
+            'CCCCCCCCCC',
+            'CC-CCCCCCC',
+            'CCC-CCCCCC'], protein_alphabet)
+        align.eliminate_similar_sequences(0.85, memory_saver=True)
         expected = Alignment([
             'A-FGAAAAAA',
             'AAAAAAAAAA',
@@ -1063,7 +1118,7 @@ class TestExtend(unittest.TestCase):
         self.assertEqual(align1, expected)
 
     def test_join_annotations(self):
-        from multicov.alignment import Alignment, ReferenceMapping
+        from multicov.alignment import Alignment
         from multicov.alphabet import protein_alphabet
         import pandas as pd
         align1 = Alignment(['IVGGYTCQ', '-VGGTEAQ', 'IGG-KDT-'], protein_alphabet)

@@ -349,7 +349,7 @@ class Alignment(object):
         from multicov.binary import BinaryAlignment
         return BinaryAlignment.from_alignment(self)
 
-    def eliminate_similar_sequences(self, threshold):
+    def eliminate_similar_sequences(self, threshold, memory_saver=None, no_numba=False):
         """ Trim the alignment by making sure no two sequences are more similar than the given threshold (in terms of
         1 - Hamming distance normalized by sequence length).
 
@@ -357,15 +357,31 @@ class Alignment(object):
         sequences if they are at least as similar as the threshold. The alignment is then trimmed by keeping a single
         representative from every connected component. The representative is chosen to have the smallest possible number
         of gaps; if several such choices exist, an arbitrary one is selected.
+
+        Using the `memory_saver` method reduces memory usage to O(E), where E is the number of pairs of sequences that
+        are more similar than the threshold, which is typically much smaller than the O(N^2) used when `memory_saver ==
+        False`. This can be much slower, however, unless the Numba package is installed.
         """
         # build graph adjacency matrix
-        if len(self) == 0:
+        n_seq = len(self)
+        if n_seq == 0:
             return self
 
-        from scipy.spatial import distance
+        if not have_numba:
+            no_numba = True
+        if memory_saver is None:
+            memory_saver = not no_numba
+
         from scipy import sparse
-        seq_dists = distance.pdist(self.to_int(as_matrix=True), 'hamming')
-        adjacency_matrix = sparse.csr_matrix((distance.squareform(seq_dists) < (1 - threshold)))
+        if not memory_saver:
+            seq_dists = distance.pdist(self.to_int(as_matrix=True), 'hamming')
+            adjacency_matrix = sparse.csr_matrix((distance.squareform(seq_dists) < (1 - threshold)))
+        else:
+            if not no_numba:
+                inds = _get_seq_sim_graph_memsave_numba(self.to_int(as_matrix=True), threshold)
+            else:
+                inds = _get_seq_sim_graph_memsave_nonumba(self.to_int(as_matrix=True), threshold)
+            adjacency_matrix = sparse.csr_matrix((np.ones(len(inds[0]), dtype=bool), inds), shape=(n_seq, n_seq))
 
         # find connect components
         n_seq_comps, seq_labels = sparse.csgraph.connected_components(adjacency_matrix, directed=False)
@@ -452,19 +468,20 @@ class Alignment(object):
 @jit_cond
 def _get_seq_counts_memsave_numba(data, threshold):
     n = len(data)
-    N = data.shape[1]
+    w = data.shape[1]
     threshold_as_count = threshold * data.shape[1]
     counts = np.ones(n)
     for i in range(n - 1):
         for j in range(i+1, n):
             n_eq = 0
-            for k in range(N):
+            for k in range(w):
                 n_eq += (data[i, k] == data[j, k])
             if n_eq >= threshold_as_count:
                 counts[i] += 1
                 counts[j] += 1
 
     return counts
+
 
 def _get_seq_counts_memsave_nonumba(data, threshold):
     n = len(data)
@@ -477,6 +494,45 @@ def _get_seq_counts_memsave_nonumba(data, threshold):
         counts[i] += np.sum(similars)
 
     return counts
+
+
+@jit_cond
+def _get_seq_sim_graph_memsave_numba(data, threshold):
+    """ Returns tuple (row_ind, col_ind) such that for every k row_ind[k] and col_ind[k] are more similar than
+    threshold. """
+    n = len(data)
+    w = data.shape[1]
+    threshold_as_count = threshold * data.shape[1]
+    row_ind = []
+    col_ind = []
+    for i in range(n - 1):
+        for j in range(i+1, n):
+            n_eq = 0
+            for k in range(w):
+                n_eq += (data[i, k] == data[j, k])
+            if n_eq >= threshold_as_count:
+                row_ind.append(i)
+                col_ind.append(j)
+
+    return row_ind, col_ind
+
+
+def _get_seq_sim_graph_memsave_nonumba(data, threshold):
+    """ Returns tuple (row_ind, col_ind) such that for every k row_ind[k] and col_ind[k] are more similar than
+    threshold. """
+    n = len(data)
+    threshold_as_count = threshold * data.shape[1]
+    row_ind = []
+    col_ind = []
+    for i in range(n - 1):
+        comparisons = (data[i] == data[i + 1:])
+        similars = (np.sum(comparisons, axis=1) >= threshold_as_count).nonzero()[0]
+
+        row_ind.extend([i]*len(similars))
+        col_ind.extend((i+1) + similars)
+
+    return row_ind, col_ind
+
 
 class ReferenceMapping(object):
     """ An object holding the mapping between a multi-alphabet sequence and several reference sequences.
