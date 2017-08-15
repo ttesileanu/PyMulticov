@@ -1,4 +1,3 @@
-* stats: freq1, freq2, covmat
 * stats: pseudocount, shrinkage
 * stats: maxentparams from mean field
 * stats: sequence energies from maxentparams
