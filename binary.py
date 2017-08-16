@@ -133,6 +133,15 @@ class BinaryAlignment(object):
         else:
             raise IndexError('Trying to index BinaryAlignment by non-string argument.')
 
+    def index_map(self, idx=None):
+        """ Map indices from character alignments to the corresponding ranges in the binary alignment.
+
+        If `idx` is not given, a full map is returned as an Nx2 array, such that `map[i]` is the binary index range for
+        position `i`.
+        If `idx` is given, only the contents of `map[idx]` are returned. Generating the full map is likely faster than
+        looping over the index. """
+        return binary_index_map(self, idx)
+
 
 def _make_binary_from_mat(m, alphabet):
     """ Create a sparse binary alignment matrix from the given dense matrix, using the given alphabet. Gaps are
@@ -155,3 +164,49 @@ def _make_binary_from_mat(m, alphabet):
     n, l = m.shape
     data = np.ones(len(i_list), float)
     return sparse.coo_matrix((data, (i_list, j_list)), shape=(n, l*nletts))
+
+
+def binary_index_map(align, idx=None):
+    """ Map indices from character alignments to the corresponding slices in the binary alignment.
+
+    If `idx` is not given, a full map is returned as an Nx2 array, such that `map[i]` is the binary index range for
+    position `i`.
+    If `idx` is given, only the contents of `map[idx]` are returned. Generating the full map is likely faster than
+    looping over the index.
+
+    The first argument can be any object that has an `alphabets` field. """
+    alphabets = align.alphabets
+    if len(alphabets) == 0:
+        if idx is not None:
+            raise IndexError('index_map called with out-of-range index.')
+        else:
+            return []
+
+    widths = np.asarray([_[1] for _ in alphabets])
+    start_idxs = np.hstack(([0], np.cumsum(widths)))
+
+    bin_widths = np.asarray([width*alphabet.size(no_gap=True) for alphabet, width in alphabets])
+    start_bin_idxs = np.hstack(([0], np.cumsum(bin_widths)))
+    if idx is not None:
+        if idx < 0 or idx >= start_idxs[-1]:
+            raise IndexError('index_map called with out-of-range index.')
+        alpha_idx = (idx >= start_idxs).nonzero()[0][-1]
+        alpha_loc = idx - start_idxs[alpha_idx]
+        alpha_len = alphabets[alpha_idx][0].size(no_gap=True)
+        start_bin_idx = start_bin_idxs[alpha_idx] + alpha_loc*alpha_len
+        end_bin_idx = start_bin_idx + alpha_len
+        return (start_bin_idx, end_bin_idx)
+    else:
+        width = np.sum(widths)
+        full_map = np.zeros((width, 2))
+        crt_map_row = 0
+        for start_bin_idx, alpha_info in zip(start_bin_idxs, alphabets):
+            alpha_len = alpha_info[0].size(no_gap=True)
+            alpha_width = alpha_info[1]
+            crt_rows = slice(crt_map_row, crt_map_row + alpha_width)
+            full_map[crt_rows, 0] = start_bin_idx + np.arange(alpha_width)*alpha_len
+            full_map[crt_rows, 1] = full_map[crt_rows, 0] + alpha_len
+
+            crt_map_row += alpha_width
+
+        return full_map

@@ -523,3 +523,71 @@ class TestGetItem(unittest.TestCase):
         bin_align = BinaryAlignment.from_alignment(align)
         self.assertIs(bin_align['seqw'], bin_align.annotations['seqw'])
 
+
+class TestIndexMap(unittest.TestCase):
+    def test_raise_on_out_of_range(self):
+        from multicov.binary import BinaryAlignment, binary_index_map
+        with self.assertRaises(IndexError):
+            binary_index_map(BinaryAlignment(), 1)
+
+    def test_on_empty(self):
+        from multicov.binary import BinaryAlignment, binary_index_map
+        self.assertEqual(len(binary_index_map(BinaryAlignment())), 0)
+
+    def test_single_alpha_single_idx(self):
+        from multicov.alignment import Alignment
+        from multicov.binary import BinaryAlignment, binary_index_map
+        from multicov.alphabet import rna_alphabet
+        align = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        bin_align = BinaryAlignment.from_alignment(align)
+        self.assertSequenceEqual(binary_index_map(bin_align, 0), (0, 4))
+        self.assertSequenceEqual(binary_index_map(bin_align, 1), (4, 8))
+        self.assertSequenceEqual(binary_index_map(bin_align, 2), (8, 12))
+
+    def test_multi_alpha_single_idx_from_character_alignment(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet, rna_alphabet
+        from multicov.binary import binary_index_map
+        align1 = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        align2 = Alignment(['DF', 'YA', '-C'], alphabet=protein_alphabet)
+
+        align = Alignment(align1).add(align2)
+
+        self.assertSequenceEqual(binary_index_map(align, 1), (4, 8))
+        self.assertSequenceEqual(binary_index_map(align, 4), (32, 52))
+
+    def test_single_alpha_full_map(self):
+        from multicov.alignment import Alignment
+        from multicov.binary import BinaryAlignment, binary_index_map
+        from multicov.alphabet import rna_alphabet
+        align = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        bin_align = BinaryAlignment.from_alignment(align)
+        full_map = binary_index_map(bin_align)
+        self.assertTrue(np.array_equal(full_map, [[0, 4], [4, 8], [8, 12]]))
+
+    def test_binalign_object_method(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet, rna_alphabet
+        from multicov.binary import BinaryAlignment
+        align1 = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        align2 = Alignment(['DF', 'YA', '-C'], alphabet=protein_alphabet)
+
+        align = Alignment(align1).add(align2)
+        bin_align = BinaryAlignment(align)
+
+        self.assertSequenceEqual(bin_align.index_map(2), (8, 12))
+        self.assertSequenceEqual(bin_align.index_map(3), (12, 32))
+
+    def test_binalign_object_method_full_map(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet, rna_alphabet
+        from multicov.binary import BinaryAlignment
+        align1 = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        align2 = Alignment(['DF', 'YA', '-C'], alphabet=protein_alphabet)
+
+        align = Alignment(align1).add(align2)
+        bin_align = BinaryAlignment(align)
+        full_map = bin_align.index_map()
+
+        self.assertTrue(np.array_equal(full_map, [[0, 4], [4, 8], [8, 12],
+                                                   [12, 32], [32, 52]]))
