@@ -13,6 +13,7 @@ class TestConstructor(unittest.TestCase):
         self.assertTrue(hasattr(align, 'annotations'))
         self.assertEqual(np.size(align.data), 0)
         self.assertEqual(len(align.alphabets), 0)
+        self.assertEqual(len(align.reference), 0)
 
     def test_make_from_list_of_strings(self):
         from multicov.alignment import Alignment

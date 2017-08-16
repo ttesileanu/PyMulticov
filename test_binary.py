@@ -13,6 +13,7 @@ class TestConstructor(unittest.TestCase):
         self.assertTrue(hasattr(bin_align, 'annotations'))
         self.assertEqual(np.size(bin_align.data), 0)
         self.assertEqual(len(bin_align.alphabets), 0)
+        self.assertEqual(len(bin_align.reference), 0)
 
     def test_make_from_matrix(self):
         from multicov.binary import BinaryAlignment
@@ -501,3 +502,24 @@ class TestFromAlignment(unittest.TestCase):
         self.assertTrue(np.array_equal(bin_align.data.todense(), np.hstack((expected1, expected2))))
         self.assertIs(bin_align.reference, align.reference)
         self.assertIs(bin_align.annotations, align.annotations)
+
+    def test_copy_alpha_refmap_and_annotations_by_ref(self):
+        from multicov.alignment import Alignment
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import rna_alphabet
+        align = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        bin_align = BinaryAlignment.from_alignment(align)
+        self.assertIs(bin_align.alphabets, align.alphabets)
+        self.assertIs(bin_align.reference, align.reference)
+        self.assertIs(bin_align.annotations, align.annotations)
+
+
+class TestGetItem(unittest.TestCase):
+    def test_get_str_goes_to_annotations(self):
+        from multicov.alignment import Alignment
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import rna_alphabet
+        align = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        bin_align = BinaryAlignment.from_alignment(align)
+        self.assertIs(bin_align['seqw'], bin_align.annotations['seqw'])
+

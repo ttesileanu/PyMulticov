@@ -5,9 +5,11 @@ import numpy as np
 from scipy import sparse
 
 
+# noinspection SpellCheckingInspection
 class Statistics(object):
     def __init__(self, alignment, precompute=()):
-        """ Initialize the statistics structure, attaching it to the given alignment.
+        """ Initialize the statistics structure, attaching it to the given alignment. This can be either a character
+        `Alignment` or a `BinaryAlignment`.
 
         The evaluation of the actual statistics is delayed until they are requested. This means that their values
         might be different if the alignment changed in the meantime. Once one of the statistics is calculated, it is
@@ -23,6 +25,10 @@ class Statistics(object):
         else:
             self.alignment = None
             self.bin_align = alignment
+
+        self.alphabets = alignment.alphabets
+        self.reference = alignment.reference
+        self.annotations = alignment.annotations
 
         self._freq1 = None
         self._freq2 = None
@@ -58,6 +64,7 @@ class Statistics(object):
             return True
         return False
 
+    # noinspection SpellCheckingInspection
     def _calculate_freq1(self):
         if self._is_empty():
             return np.asarray([])
@@ -67,10 +74,10 @@ class Statistics(object):
 
         bin_align = self.bin_align
 
-        seqw = bin_align.annotations['seqw'].as_matrix()
-        Neff = np.sum(seqw)
+        seqw = self.annotations['seqw'].as_matrix()
+        n_eff = np.sum(seqw)
 
-        return seqw * bin_align.data / Neff
+        return seqw * bin_align.data / n_eff
 
     def _calculate_freq2(self):
         if self._is_empty():
@@ -81,13 +88,13 @@ class Statistics(object):
 
         bin_align = self.bin_align
 
-        seqw = bin_align.annotations['seqw'].as_matrix()
-        Neff = np.sum(seqw)
+        seqw = self.annotations['seqw'].as_matrix()
+        n_eff = np.sum(seqw)
 
         bindata = bin_align.data
         seqw_mat = sparse.diags(seqw, format='csr')
 
-        return (bindata.T * seqw_mat * bindata).todense() / Neff
+        return (bindata.T * seqw_mat * bindata).todense() / n_eff
 
     def _calculate_cmat(self):
         if self._is_empty():
@@ -107,3 +114,11 @@ class Statistics(object):
                 self._cmat = self._calculate_cmat()
             else:
                 raise ValueError("Unknown statistics update target: " + str(crt_what) + ".")
+
+    def __getitem__(self, item):
+        """ Indexing the statistics object with a string key is equivalent to indexing the annotations,
+        `self[key] is self.annotations[key]`. """
+        if isinstance(item, str):
+            return self.annotations[item]
+        else:
+            raise IndexError('Trying to use Statistics.__getitem__ with non-string key.')

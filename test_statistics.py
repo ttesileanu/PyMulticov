@@ -49,7 +49,7 @@ def _slow_get_freq2(alignment):
     return result
 
 
-class TestStatisticsConstructor(unittest.TestCase):
+class TestConstructor(unittest.TestCase):
     def test_on_empty(self):
         from multicov.alignment import Alignment
         from multicov.statistics import Statistics
@@ -57,10 +57,121 @@ class TestStatisticsConstructor(unittest.TestCase):
         self.assertTrue(hasattr(stats, 'freq1'))
         self.assertTrue(hasattr(stats, 'freq2'))
         self.assertTrue(hasattr(stats, 'cmat'))
+        self.assertTrue(hasattr(stats, 'alphabets'))
+        self.assertTrue(hasattr(stats, 'reference'))
+        self.assertTrue(hasattr(stats, 'annotations'))
         self.assertEqual(len(stats.freq1), 0)
         self.assertEqual(len(stats.freq2), 0)
         self.assertEqual(len(stats.cmat), 0)
+        self.assertEqual(len(stats.alphabets), 0)
+        self.assertEqual(len(stats.reference), 0)
+        self.assertEqual(len(stats.annotations), 0)
 
+    def test_on_empty_binalign(self):
+        from multicov.binary import BinaryAlignment
+        from multicov.statistics import Statistics
+        stats = Statistics(BinaryAlignment())
+        self.assertTrue(hasattr(stats, 'freq1'))
+        self.assertTrue(hasattr(stats, 'freq2'))
+        self.assertTrue(hasattr(stats, 'cmat'))
+        self.assertTrue(hasattr(stats, 'alphabets'))
+        self.assertTrue(hasattr(stats, 'reference'))
+        self.assertTrue(hasattr(stats, 'annotations'))
+        self.assertEqual(len(stats.freq1), 0)
+        self.assertEqual(len(stats.freq2), 0)
+        self.assertEqual(len(stats.cmat), 0)
+        self.assertEqual(len(stats.alphabets), 0)
+        self.assertEqual(len(stats.reference), 0)
+        self.assertEqual(len(stats.annotations), 0)
+
+    def test_delayed_evaluation(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        from multicov.statistics import Statistics
+        align = Alignment([
+            'WKHNA',
+            'KHRCD',
+            'LGVVG',
+            'LIGDD',
+            'CMPRY',
+            'QWFWR',
+            'VTMPE',
+            'LNYIN',
+            'WHV-E',
+            'PIWGG',
+            'PPCWV',
+            'E-MWR',
+            'RFGKF',
+            'CGRCG',
+            'T-PMV',
+            'LNCPY'
+        ], protein_alphabet)
+
+        stats = Statistics(align)
+        self.assertIsNone(stats._freq1)
+        self.assertIsNone(stats._freq2)
+        self.assertIsNone(stats._cmat)
+
+    def test_copy_alpha_annots_refmap_by_ref(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        from multicov.statistics import Statistics
+        align = Alignment([
+            'WKHNA',
+            'KHRCD',
+            'LGVVG',
+            'LIGDD',
+            'CMPRY',
+            'QWFWR',
+            'VTMPE',
+            'LNYIN',
+            'WHV-E',
+            'PIWGG',
+            'PPCWV',
+            'E-MWR',
+            'RFGKF',
+            'CGRCG',
+            'T-PMV',
+            'LNCPY'
+        ], protein_alphabet)
+
+        stats = Statistics(align)
+        self.assertIs(stats.alphabets, align.alphabets)
+        self.assertIs(stats.reference, align.reference)
+        self.assertIs(stats.annotations, align.annotations)
+
+    def test_copy_alpha_annots_refmap_by_ref_for_binalign(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        from multicov.statistics import Statistics
+        align = Alignment([
+            'WKHNA',
+            'KHRCD',
+            'LGVVG',
+            'LIGDD',
+            'CMPRY',
+            'QWFWR',
+            'VTMPE',
+            'LNYIN',
+            'WHV-E',
+            'PIWGG',
+            'PPCWV',
+            'E-MWR',
+            'RFGKF',
+            'CGRCG',
+            'T-PMV',
+            'LNCPY'
+        ], protein_alphabet)
+        bin_align = align.to_binary()
+
+        stats = Statistics(bin_align)
+        self.assertIs(stats.alphabets, bin_align.alphabets)
+        self.assertIs(stats.reference, bin_align.reference)
+        self.assertIs(stats.annotations, bin_align.annotations)
+
+
+
+class TestEvaluation(unittest.TestCase):
     def test_freq1_on_protein(self):
         from multicov.alignment import Alignment
         from multicov.alphabet import protein_alphabet
@@ -225,17 +336,6 @@ class TestStatisticsConstructor(unittest.TestCase):
         self.assertTrue(np.allclose(stats.freq2, expected_f2))
         self.assertTrue(np.allclose(stats.cmat, expected_cmat))
 
-    def test_on_empty_binalign(self):
-        from multicov.binary import BinaryAlignment
-        from multicov.statistics import Statistics
-        stats = Statistics(BinaryAlignment())
-        self.assertTrue(hasattr(stats, 'freq1'))
-        self.assertTrue(hasattr(stats, 'freq2'))
-        self.assertTrue(hasattr(stats, 'cmat'))
-        self.assertEqual(len(stats.freq1), 0)
-        self.assertEqual(len(stats.freq2), 0)
-        self.assertEqual(len(stats.cmat), 0)
-
     def test_on_protein_binalign(self):
         from multicov.alignment import Alignment
         from multicov.alphabet import protein_alphabet
@@ -293,3 +393,31 @@ class TestStatisticsConstructor(unittest.TestCase):
         stats = Statistics(align, precompute=('freq1', 'freq2'))
         self.assertIsNotNone(stats._freq1)
         self.assertIsNotNone(stats._freq2)
+
+
+class TestGetItem(unittest.TestCase):
+    def test_get_str_goes_to_annotations(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        from multicov.statistics import Statistics
+        align = Alignment([
+            'WKHNAY',
+            'KHRCDA',
+            'LGVVGY',
+            'LIGDDH',
+            'CMPRYW',
+            'QWFWRA',
+            'VTMPEG',
+            'LNYINM',
+            'WHV-EW',
+            'PIWGGF',
+            'PPCWVE',
+            'E-MWRG',
+            'RFGKFT',
+            'CGRCGS',
+            'T-PMVW',
+            'LNCPYA'
+        ], protein_alphabet)
+        stats = Statistics(align)
+        self.assertIs(stats['seqw'], align['seqw'])
+

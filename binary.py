@@ -20,7 +20,10 @@ class BinaryAlignment(object):
 
     def add(self, data, alphabet=None):
         """ Add a new chunk of data, with the given alphabet. `data` can be another binary alignment, or a matrix. """
-        if (hasattr(data, 'annotations') and len(data) == 0) or np.size(data) == 0:
+        if hasattr(data, 'annotations'):
+            if len(data) == 0:
+                return self
+        elif np.size(data) == 0:
             return self
 
         # length-check, unless this alignment is empty
@@ -123,6 +126,12 @@ class BinaryAlignment(object):
 
     def __repr__(self):
         return "(" + repr(self.alphabets) + " x " + str(len(self)) + " seqs,\n" + repr(self.data) + ")"
+
+    def __getitem__(self, item):
+        if isinstance(item, str):
+            return self.annotations[item]
+        else:
+            raise IndexError('Trying to index BinaryAlignment by non-string argument.')
 
 
 def _make_binary_from_mat(m, alphabet):
