@@ -5,7 +5,7 @@ import numpy as np
 
 from scipy import sparse
 
-from binary import binary_index_map
+from multicov.binary import binary_index_map
 
 
 # noinspection SpellCheckingInspection
