@@ -1,5 +1,5 @@
-* stats: sequence energies from maxentparams
+* stats: sequence energies using Numba optimized code
 * stats: change gauge for maxent params, reduce couplings, predict contacts
-% io: make load_fasta faster (in one test it's 5x slower than Matlab version!)
 
+% io: make load_fasta faster (in one test it's 5x slower than Matlab version!)
 * stats: shrinkage?

@@ -177,6 +177,7 @@ class MaxentModel(object):
     """ This class calculates and stores the parameters of a maximum entropy model for a multiple sequence alignment.
     """
     def __init__(self, stats):
+        """ Initialize the maximum entropy model based on the given statistics structure. """
         self.alphabets = stats.alphabets
         self.annotations = stats.annotations
         self.reference = stats.reference
@@ -185,6 +186,24 @@ class MaxentModel(object):
         self.calculate_couplings()
 
     def calculate_couplings(self):
+        """ Calculate the couplings for the statistics in `self.stats`.
+
+        The couplings are stored in `self.couplings`, and they contain an entry for each pair of alignment position and
+        character at that location, J_{ij}(a, b). The pairs of position and character, (i, a) and (j, b), are flattened
+        into a linear index such that the values corresponding to all the possible characters at position 0 occur before
+        those for position 1, which occur before those at position 2, etc. There is no location for gaps; the coupling
+        between a gap and any other character is considered to be 0.
+
+        Couplings between different characters at the same location, J_{ii}(a, b), are zero. The diagonal entries,
+        J_{ii}(a, a) are non-zero; they correspond to double the "fields", J_{ii}(a, a) = 2*h_i(a) (see below).
+
+        The couplings calculated by this model are used to provide a probabilistic model of sequence alignments. The
+        probability of a sequence a_i is given by
+          P = e^{-E(a)} / Z ,
+        where E is the 'energy' score of the sequence, and Z is a normalization constant ensuring that the sum of P over
+        all possible sequences equals 1. The energy is given by a quadratic form
+          E(a) = -1/2*\sum_{i, j, a, b} J_{ij}(a, b) = -\sum_{i<j} J_{ij}(a, b) - \sum_i h_i(a).
+        """
         freq1 = self.stats.freq1
         cmat = self.stats.cmat
 
@@ -202,3 +221,57 @@ class MaxentModel(object):
             # normalize such that fields are zero for gaps; make sure we don't divide by zero, though
             crt_Pgap = max(1e-10, 1 - np.sum(crt_Pi))
             self.couplings[crt_slice, crt_slice] = np.diag(2*np.log(crt_Pi / crt_Pgap))
+
+    def score(self, seqs, internal_method='numpy'):
+        """ Calculate the energy scores for the given sequences.
+
+        See calculate_couplings for a definition of the energy.
+        """
+        input_type = None
+        if hasattr(seqs, 'to_binary'):
+            # is this a character alignment?
+            if len(seqs) == 0:
+                return np.asarray([])
+            input_type = 'alignment'
+            align = seqs
+            if internal_method == 'numpy':
+                bin_align = seqs.to_binary()
+        elif hasattr(seqs, 'from_alignment'):
+            # is this a binary alignment?
+            if len(seqs) == 0:
+                return np.asarray([])
+            input_type = 'binary'
+            bin_align = seqs
+        elif hasattr(seqs, '__len__'):
+            if len(seqs) == 0:
+                return np.asarray([])
+            if isinstance(seqs[0], str):
+                input_type = 'list'
+                seqs = np.asmatrix([list(_) for _ in seqs])
+            else:
+                input_type = 'matrix'
+
+            from multicov.alignment import Alignment
+
+            crt_idx = 0
+            align = Alignment()
+            for alpha, width in self.alphabets:
+                crt_data = seqs[:, crt_idx:crt_idx+width]
+                align.add(crt_data, alpha)
+
+            if internal_method == 'numpy':
+                bin_align = align.to_binary()
+        else:
+            raise ValueError('The input to MaxentModel.score should be a character or binary alignment, or a list of'
+                             'sequences or matrix of characters.')
+
+        bin_data = sparse.csr_matrix(bin_align.data)
+
+        if internal_method == 'numpy' or input_type == 'binary':
+            energies = np.asarray((-1/2) * (bin_data.multiply(bin_data.dot(self.couplings))).sum(axis=1)).squeeze()
+        elif internal_method == 'numba1':
+            # XXX should implement this at some point
+            pass
+#            self._calculate_energies_numba1(align.data)
+
+        return energies

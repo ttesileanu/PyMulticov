@@ -530,7 +530,7 @@ class TestPseudocount(unittest.TestCase):
         self.assertTrue(np.allclose(cmat, stats2.cmat))
 
 
-class TestMaxent(unittest.TestCase):
+class TestMaxentConstruction(unittest.TestCase):
     def test_on_empty(self):
         from multicov.alignment import Alignment
         from multicov.statistics import Statistics, MaxentModel
@@ -614,3 +614,109 @@ class TestMaxent(unittest.TestCase):
             crt_slice = slice(crt_range[0], crt_range[1])
             crt_block = maxent.couplings[crt_slice, crt_slice]
             self.assertLess(np.max(np.abs(crt_block - np.diag(np.diag(crt_block)))), 1e-10)
+
+    def test_against_matlab_example(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        from multicov.statistics import Statistics, MaxentModel
+        from scipy.io import loadmat
+        import os.path
+        matlab = loadmat(os.path.join('test_data', 'maxent_sample.mat'),
+                         squeeze_me=True)
+        align = Alignment(matlab['alignment']['data'][()], protein_alphabet)
+        stats = Statistics(align, regularization_amount=0.5)
+        maxent = MaxentModel(stats)
+        self.assertTrue(np.allclose(stats.cmat, matlab['dca']['cmat'][()]))
+        self.assertTrue(np.allclose(maxent.couplings, matlab['params_nogap_nofc_nodiagtrick']['couplings'][()]))
+
+
+class TestMaxentEnergyEvaluation(unittest.TestCase):
+    def test_against_matlab_example(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet
+        from multicov.statistics import Statistics, MaxentModel
+        from scipy.io import loadmat
+        import os.path
+        matlab = loadmat(os.path.join('test_data', 'maxent_sample.mat'),
+                         squeeze_me=True)
+        align = Alignment(matlab['alignment']['data'][()], protein_alphabet)
+        stats = Statistics(align, regularization_amount=0.5)
+        maxent = MaxentModel(stats)
+        energies = maxent.score(align)
+        self.assertTrue(np.allclose(energies, matlab['energies'][()]))
+
+    def test_gap_gauge(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet, dna_alphabet, rna_alphabet
+        from multicov.align_io import load_fasta
+        from multicov.statistics import Statistics, MaxentModel
+        from os.path import join
+        align1 = load_fasta(join('test_data', 'test_aln2.fasta'), dna_alphabet, invalid_letter_policy='gap')
+        align2 = load_fasta(join('test_data', 'test_aln1.fasta'), protein_alphabet, invalid_letter_policy='gap')
+        align3 = load_fasta(join('test_data', 'test_aln2.fasta'), rna_alphabet, invalid_letter_policy='uppergap')
+        align = Alignment(align1)
+        align.add(align2).add(align3)
+        stats = Statistics(align, regularization_amount=0.5)
+        maxent = MaxentModel(stats)
+        energies = maxent.score([align.get_width()*'-'])
+        self.assertLess(np.max(np.abs(energies)), 1e-10)
+
+    def test_with_list_of_seqs(self):
+        from multicov.alignment import Alignment
+        from multicov.binary import binary_index_map
+        from multicov.alphabet import protein_alphabet
+        from multicov.statistics import Statistics, MaxentModel
+        align = Alignment([
+            'WKHNAY',
+            'KHRCDA',
+            'LGVVGY',
+            'LIGDDH',
+            'CMPRYW',
+            'QWFWRA',
+            'VTMPEG',
+            'LNYINM',
+            'WHV-EW',
+            'PIWGGF',
+            'PPCWVE',
+            'E-MWRG',
+            'RFGKFT',
+            'CGRCGS',
+            'T-PMVW',
+            'LNCPYA'
+        ], protein_alphabet)
+        stats = Statistics(align, regularization_amount=0.1)
+        maxent = MaxentModel(stats)
+        seqs = ['WHVDYA', 'PP-FR-']
+        energies = maxent.score(seqs)
+        seq_align = Alignment(seqs, protein_alphabet)
+        energies0 = maxent.score(seq_align)
+        self.assertTrue(np.allclose(energies, energies0))
+
+    def test_with_matrix(self):
+        from multicov.alignment import Alignment
+        from multicov.binary import binary_index_map
+        from multicov.alphabet import protein_alphabet
+        from multicov.statistics import Statistics, MaxentModel
+        align = Alignment([
+            'WKHNAY',
+            'KHRCDA',
+            'LGVVGY',
+            'LIGDDH',
+            'CMPRYW',
+            'QWFWRA',
+            'VTMPEG',
+            'LNYINM',
+            'WHV-EW',
+            'PIWGGF',
+            'PPCWVE',
+            'E-MWRG',
+            'RFGKFT',
+            'CGRCGS',
+            'T-PMVW',
+            'LNCPYA'
+        ], protein_alphabet)
+        stats = Statistics(align, regularization_amount=0.1)
+        maxent = MaxentModel(stats)
+        energies = maxent.score(align.data)
+        energies0 = maxent.score(align)
+        self.assertTrue(np.allclose(energies, energies0))
