@@ -205,7 +205,7 @@ class TestAlignToSequence(unittest.TestCase):
         align = Alignment(['AA-U', 'ACGU', '--GG', 'A-GG', 'GGC-'], rna_alphabet)
         align_to_sequence(align, 'GUAACCGUU')
         self.assertEqual(len(align.reference.seqs), 1)
-        self.assertSequenceEqual(list(align.reference.seqs[0]), [3, 5, 6, 8])
+        self.assertSequenceEqual(list(align.reference.seqs[0]), [3, 5, 6, 7])
 
     def test_with_imperfect_match(self):
         from multicov.alignment import Alignment
@@ -239,7 +239,7 @@ class TestAlignToSequence(unittest.TestCase):
         align = Alignment(['AA-G', 'ACGT', '--GG', 'A-GG', 'GGC-'], dna_alphabet)
         align_to_sequence(align, 'GTAACCGTT', ref_idx_names=['1', '2', '3', '3a', '4', '5', 8, 9, 9.5])
         self.assertEqual(len(align.reference.seqs), 1)
-        self.assertSequenceEqual(list(align.reference.seqs[0]), ['3a', '5', 8, 9.5])
+        self.assertSequenceEqual(list(align.reference.seqs[0]), ['3a', '5', 8, 9])
 
     def test_force_idx(self):
         from multicov.alignment import Alignment
@@ -248,4 +248,4 @@ class TestAlignToSequence(unittest.TestCase):
         align = Alignment(['AA-U', 'ACGU', '--GG', 'A-GG', 'GGC-'], rna_alphabet)
         align_to_sequence(align, 'GUAACCGUU', force_idx=0)
         self.assertEqual(len(align.reference.seqs), 1)
-        self.assertSequenceEqual(list(align.reference.seqs[0]), [2, 3, None, 8])
+        self.assertSequenceEqual(list(align.reference.seqs[0]), [2, 3, None, 7])

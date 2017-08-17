@@ -10,7 +10,7 @@ from Bio.SubsMat import MatrixInfo
 def _get_substitution_matrix(alphabet):
     """ Return a tuple with default parameters `(substitution_matrix, gap_open, gap_extend) for the given alphabet. """
     if alphabet == protein_alphabet:
-        return MatrixInfo.blosum50, -10, -0.5
+        return MatrixInfo.blosum50, -8, -8
     elif alphabet == dna_alphabet:
         return ({
             ('A', 'A'): 5,
@@ -68,7 +68,8 @@ def search(align, seq, move_to_top=False, substitution_matrix=None, gap_open=Non
     scores = []
     for i, align_seq in enumerate(align_seqs):
         scores.append(pairwise2.align.globalds(seq, align_seq, substitution_matrix,
-                                               gap_open, gap_extend, one_alignment_only=True, score_only=True))
+                                               gap_open, gap_extend, one_alignment_only=True, score_only=True,
+                                               penalize_end_gaps=False))
 
     # find the highest scoring sequence
     best_id = np.argmax(scores)
@@ -106,6 +107,8 @@ def align_to_sequence(align, seq, ref_idx_names=None, truncate=False, force_idx=
     will be attached to the alignment.
 
     Currently this only works for single alphabet alignments, and the alphabet needs to be protein, DNA, or RNA.
+
+    The position of the matched sequence in the alignment, and the accuracy of the match, are returned in a dictionary.
     """
     if len(align) == 0:
         # nothing to do
@@ -130,7 +133,8 @@ def align_to_sequence(align, seq, ref_idx_names=None, truncate=False, force_idx=
     align_seq_no_gaps_as_str = ''.join(align_seq_no_gaps)
 
     seq = ''.join(seq)
-    p_al = pairwise2.align.globalds(seq, align_seq_no_gaps_as_str, substitution_matrix, gap_open, gap_extend)
+    p_al = pairwise2.align.globalds(seq, align_seq_no_gaps_as_str, substitution_matrix, gap_open, gap_extend,
+                                    penalize_end_gaps=False)
 
     # this will be the mapping from indices in alignment to indices in `seq`
     ref_idxs = np.asarray([None for _ in range(len(align_seq))])
