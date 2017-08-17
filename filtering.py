@@ -154,7 +154,7 @@ def align_to_sequence(align, seq, ref_idx_names=None, truncate=False, force_idx=
         ref_idxs = ref_idxs[truncate_mask]
 
     if ref_idx_names is not None:
-        ref_seq = [ref_idx_names[_] for _ in ref_idxs if _ is not None]
+        ref_seq = [ref_idx_names[_] if _ is not None else None for _ in ref_idxs]
     else:
         ref_seq = ref_idxs
 

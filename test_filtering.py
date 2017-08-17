@@ -180,6 +180,15 @@ class TestAlignToSequence(unittest.TestCase):
         self.assertEqual(len(align.reference.seqs), 1)
         self.assertSequenceEqual(list(align.reference.seqs[0]), [0, 1, None, 2])
 
+    def test_with_ref_index_names_and_extra_residues_in_align_vs_refseq(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import rna_alphabet
+        from multicov.filtering import align_to_sequence
+        align = Alignment(['AA-U', 'ACGU', '--GG', 'A-GG', 'GGC-'], rna_alphabet)
+        align_to_sequence(align, ['A', 'A', 'U'], ref_idx_names=('a', 'b', 'c'))
+        self.assertEqual(len(align.reference.seqs), 1)
+        self.assertSequenceEqual(list(align.reference.seqs[0]), ['a', 'b', None, 'c'])
+
     def test_with_truncate(self):
         from multicov.alignment import Alignment
         from multicov.alphabet import rna_alphabet
