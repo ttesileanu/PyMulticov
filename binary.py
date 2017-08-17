@@ -198,13 +198,13 @@ def binary_index_map(align, idx=None):
         return (start_bin_idx, end_bin_idx)
     else:
         width = np.sum(widths)
-        full_map = np.zeros((width, 2))
+        full_map = np.zeros((width, 2), dtype=int)
         crt_map_row = 0
         for start_bin_idx, alpha_info in zip(start_bin_idxs, alphabets):
             alpha_len = alpha_info[0].size(no_gap=True)
             alpha_width = alpha_info[1]
             crt_rows = slice(crt_map_row, crt_map_row + alpha_width)
-            full_map[crt_rows, 0] = start_bin_idx + np.arange(alpha_width)*alpha_len
+            full_map[crt_rows, 0] = start_bin_idx + np.arange(alpha_width, dtype=int)*alpha_len
             full_map[crt_rows, 1] = full_map[crt_rows, 0] + alpha_len
 
             crt_map_row += alpha_width
