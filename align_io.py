@@ -105,6 +105,65 @@ def load_fasta(fname, alphabet, strip_ws_in_annot=True, invalid_letter_policy='u
     return result
 
 
+def _name_to_alpha(name):
+    from multicov.alphabet import protein_alphabet, dna_alphabet, rna_alphabet, NumericAlphabet
+    if name == 'protein':
+        return protein_alphabet
+    elif name == 'dna':
+        return dna_alphabet
+    elif name == 'rna':
+        return rna_alphabet
+    elif hasattr(name, 'startswith') and name.startswith('numeric'):
+        try:
+            params = [int(_) for _ in name[8:-1].split(':')]
+            # XXX the naming convention for numeric alphabets doesn't indicate whether there are gaps
+            return NumericAlphabet(*params)
+        except:
+            raise Exception('Ill-formed numeric alphabet ' + str(name) + '.')
+    else:
+        raise Exception('Unrecognized alphabet ' + str(name) + '.')
+
+
+def to_hdf(alignment, hdf_store, key):
+    """ Save the alignment in a group inside a Pandas `HDFStore`. """
+    from pandas import Series, DataFrame
+    alphabet_names = Series([_[0].name for _ in alignment.alphabets])
+    alphabet_widths = Series([_[1] for _ in alignment.alphabets])
+    data_as_list = Series([''.join(_.getA1()) for _ in alignment.data])
+
+    max_ref_len = max(len(_) for _ in alignment.reference.seqs)
+    ref_extended = [np.hstack((np.asarray(_), np.tile(np.nan, max_ref_len - len(_)))) for _ in alignment.reference.seqs]
+    ref_as_df = DataFrame(ref_extended)
+
+    hdf_store.put(key + '/alphabet_names', alphabet_names)
+    hdf_store.put(key + '/alphabet_widths', alphabet_widths)
+    hdf_store.put(key + '/data', data_as_list)
+    hdf_store.put(key + '/ref', ref_as_df)
+    hdf_store.put(key + '/annotations', alignment.annotations)
+
+
+def from_hdf(hdf_store, key):
+    """ Load an alignment from a Pandas `HDFStore`. """
+    alignment = Alignment()
+
+    data_as_list = hdf_store.get(key + '/data').as_matrix()
+    alignment.data = np.asmatrix([list(_) for _ in data_as_list])
+
+    ref_as_df = hdf_store.get(key + '/ref').as_matrix()
+    ref_no_nan = [_[np.isfinite(_)] for _ in ref_as_df]
+    alignment.reference = ReferenceMapping(ref_no_nan)
+
+    alphabet_names = hdf_store.get(key + '/alphabet_names').as_matrix()
+    alphabet_widths = hdf_store.get(key + '/alphabet_widths').as_matrix()
+    alignment.alphabets = [(_name_to_alpha(name), width) for name, width in zip(alphabet_names, alphabet_widths)]
+
+    alignment.annotations = hdf_store.get(key + '/annotations')
+
+    # XXX should validate alignment
+
+    return alignment
+
+
 def _invalid_to_gap(s, alphabet):
     """ Convert letters that are not in the alphabet to gaps.
 
