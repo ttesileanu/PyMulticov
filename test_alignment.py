@@ -908,6 +908,18 @@ class TestToBinary(unittest.TestCase):
         self.assertIs(bin_align.reference, align.reference)
         self.assertIs(bin_align.annotations, align.annotations)
 
+    def test_include_gaps(self):
+        from multicov.alignment import Alignment
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import rna_alphabet
+        align = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        bin_align = align.to_binary(include_gaps=True)
+        expected = BinaryAlignment([
+            [0, 1, 0, 0, 0,  0, 0, 1, 0, 0,  0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0,  0, 0, 0, 0, 1,  0, 1, 0, 0, 0],
+            [1, 0, 0, 0, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0]], rna_alphabet, include_gaps=True)
+        self.assertEqual(bin_align, expected)
+
 
 class TestEliminateSimilarSequences(unittest.TestCase):
     def test_empty(self):

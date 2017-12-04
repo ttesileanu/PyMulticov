@@ -9,11 +9,18 @@ import pandas as pd
 
 
 class BinaryAlignment(object):
-    def __init__(self, data=None, alphabet=None, include_gaps=False):
+    def __init__(self, data=None, alphabet=None, include_gaps=None):
         self.data = sparse.coo_matrix([])
         self.reference = ReferenceMapping()
         self.alphabets = []
         self.annotations = pd.DataFrame({'seqw': []})
+
+        if include_gaps is None:
+            if hasattr(data, 'include_gaps'):
+                include_gaps = data.include_gaps
+            else:
+                include_gaps = False
+
         self.include_gaps = include_gaps
 
         if data is not None:
@@ -36,6 +43,16 @@ class BinaryAlignment(object):
 
         if alphabet is None:
             # adding another alignment
+
+            # make sure the other alignment has the same state of include_gaps
+            # XXX this is a pretty dumb way of doing it
+            if data.include_gaps and not self.include_gaps:
+                data = BinaryAlignment(data)
+                data.remove_gap_positions()
+            elif not data.include_gaps and self.include_gaps:
+                data = BinaryAlignment(data)
+                data.add_gap_positions()
+
             if old_n_rows == 0:
                 self.data = data.data.copy()
                 self.annotations = data.annotations.copy()
@@ -52,7 +69,7 @@ class BinaryAlignment(object):
             else:
                 self.data = sparse.coo_matrix(sparse.hstack((self.data, data)))
 
-            n_letters = alphabet.size(no_gap=True)
+            n_letters = alphabet.size(no_gap=(not self.include_gaps))
             # noinspection PyUnresolvedReferences
             n_binpos = np.shape(data)[1]
             if n_binpos % n_letters != 0:

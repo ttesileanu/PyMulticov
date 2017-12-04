@@ -255,6 +255,16 @@ class TestAdd(unittest.TestCase):
         bin_align2.add(bin_align1)
         self.assertEqual(bin_align1, bin_align2)
 
+    def test_add_to_empty_include_gaps(self):
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import dna_alphabet
+        bin_align1 = BinaryAlignment([
+            [0, 0, 0, 1, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 0, 0, 0, 1],
+            [0, 0, 1, 0, 0,  0, 0, 1, 0, 0,  0, 1, 0, 0, 0,  0, 0, 0, 0, 1]], dna_alphabet, include_gaps=True)
+        bin_align2 = BinaryAlignment(include_gaps=True)
+        bin_align2.add(bin_align1)
+        self.assertEqual(bin_align1, bin_align2)
+
     def test_add_alignment(self):
         from multicov.binary import BinaryAlignment
         from multicov.alphabet import protein_alphabet, dna_alphabet
@@ -286,6 +296,99 @@ class TestAdd(unittest.TestCase):
              1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
         ])))
 
+    def test_add_alignment_gap_to_nogap(self):
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import protein_alphabet, dna_alphabet
+        bin_align1 = BinaryAlignment([
+            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+             1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], protein_alphabet)
+        bin_align2 = BinaryAlignment([
+            [0, 0, 0, 1, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 0, 0, 0, 1],
+            [0, 0, 1, 0, 0,  0, 0, 1, 0, 0,  0, 1, 0, 0, 0,  0, 0, 0, 0, 1],
+            [0, 1, 0, 0, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 1, 0, 0, 0]], dna_alphabet, include_gaps=True)
+        bin_align = BinaryAlignment(bin_align1)
+        bin_align.add(bin_align2)
+        self.assertNotEqual(bin_align, bin_align1)
+        self.assertNotEqual(bin_align, bin_align2)
+        self.assertSequenceEqual(bin_align.alphabets, [(protein_alphabet, 2), (dna_alphabet, 4)])
+        self.assertTrue(np.array_equal(bin_align.data.todense(), np.asmatrix([
+            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+             1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+        ])))
+
+    def test_add_alignment_nogap_to_gap(self):
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import protein_alphabet, dna_alphabet
+        bin_align1 = BinaryAlignment([
+            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+             0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], protein_alphabet, include_gaps=True)
+        bin_align2 = BinaryAlignment([
+            [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]], dna_alphabet)
+        bin_align = BinaryAlignment(bin_align1)
+        bin_align.add(bin_align2)
+        self.assertNotEqual(bin_align, bin_align1)
+        self.assertNotEqual(bin_align, bin_align2)
+        self.assertSequenceEqual(bin_align.alphabets, [(protein_alphabet, 2), (dna_alphabet, 4)])
+        self.assertTrue(np.array_equal(bin_align.data.todense(), np.asmatrix([
+            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 1, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+             0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 1, 0, 0,  0, 0, 1, 0, 0,  0, 1, 0, 0, 0,  0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 1, 0, 0, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 1, 0, 0, 0]
+        ])))
+
+    def test_add_alignment_gap_to_gap(self):
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import protein_alphabet, dna_alphabet
+        bin_align1 = BinaryAlignment([
+            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+             0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], protein_alphabet, include_gaps=True)
+        bin_align2 = BinaryAlignment([
+            [0, 0, 0, 1, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 0, 0, 0, 1],
+            [0, 0, 1, 0, 0,  0, 0, 1, 0, 0,  0, 1, 0, 0, 0,  0, 0, 0, 0, 1],
+            [0, 1, 0, 0, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 1, 0, 0, 0]], dna_alphabet, include_gaps=True)
+        bin_align = BinaryAlignment(bin_align1)
+        bin_align.add(bin_align2)
+        self.assertNotEqual(bin_align, bin_align1)
+        self.assertNotEqual(bin_align, bin_align2)
+        self.assertSequenceEqual(bin_align.alphabets, [(protein_alphabet, 2), (dna_alphabet, 4)])
+        self.assertTrue(np.array_equal(bin_align.data.todense(), np.asmatrix([
+            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 1, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+             0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 1, 0, 0,  0, 0, 1, 0, 0,  0, 1, 0, 0, 0,  0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 1, 0, 0, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 1, 0, 0, 0]
+        ])))
+
     def test_add_array(self):
         from multicov.binary import BinaryAlignment
         from multicov.alphabet import dna_alphabet, rna_alphabet
@@ -306,6 +409,28 @@ class TestAdd(unittest.TestCase):
              0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
             [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
              1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+        ])))
+
+    def test_add_array_gap(self):
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import dna_alphabet, rna_alphabet
+        bin_align = BinaryAlignment([
+            [0, 0, 0, 1, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 0, 0, 0, 1],
+            [0, 0, 1, 0, 0,  0, 0, 1, 0, 0,  0, 1, 0, 0, 0,  0, 0, 0, 0, 1],
+            [0, 1, 0, 0, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 1, 0, 0, 0]], dna_alphabet, include_gaps=True)
+        bin_align.add([
+            [0, 0, 0, 1, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 0, 0, 0, 1],
+            [0, 0, 1, 0, 0,  0, 0, 1, 0, 0,  0, 1, 0, 0, 0,  0, 0, 0, 0, 1],
+            [0, 1, 0, 0, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 1, 0, 0, 0]], rna_alphabet)
+
+        self.assertSequenceEqual(bin_align.alphabets, [(dna_alphabet, 4), (rna_alphabet, 4)])
+        self.assertTrue(np.array_equal(bin_align.data.todense(), np.asmatrix([
+            [0, 0, 0, 1, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 0, 0, 0, 1,
+             0, 0, 0, 1, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 0, 0, 0, 1],
+            [0, 0, 1, 0, 0,  0, 0, 1, 0, 0,  0, 1, 0, 0, 0,  0, 0, 0, 0, 1,
+             0, 0, 1, 0, 0,  0, 0, 1, 0, 0,  0, 1, 0, 0, 0,  0, 0, 0, 0, 1],
+            [0, 1, 0, 0, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 1, 0, 0, 0,
+             0, 1, 0, 0, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0,  0, 1, 0, 0, 0]
         ])))
 
     def test_return_self(self):
@@ -686,7 +811,7 @@ class TestIndexMap(unittest.TestCase):
         align2 = Alignment(['DF', 'YA', '-C'], alphabet=protein_alphabet)
 
         align = Alignment(align1).add(align2)
-        bin_align = BinaryAlignment(align)
+        bin_align = BinaryAlignment.from_alignment(align)
 
         self.assertSequenceEqual(bin_align.index_map(2), (8, 12))
         self.assertSequenceEqual(bin_align.index_map(3), (12, 32))
@@ -699,7 +824,7 @@ class TestIndexMap(unittest.TestCase):
         align2 = Alignment(['DF', 'YA', '-C'], alphabet=protein_alphabet)
 
         align = Alignment(align1).add(align2)
-        bin_align = BinaryAlignment(align)
+        bin_align = BinaryAlignment.from_alignment(align)
         full_map = bin_align.index_map()
 
         self.assertTrue(np.array_equal(full_map, [[0, 4], [4, 8], [8, 12],
@@ -713,7 +838,7 @@ class TestIndexMap(unittest.TestCase):
         align2 = Alignment(['DF', 'YA', '-C'], alphabet=protein_alphabet)
 
         align = Alignment(align1).add(align2)
-        bin_align = BinaryAlignment(align, include_gaps=True)
+        bin_align = BinaryAlignment.from_alignment(align, include_gaps=True)
         full_map = bin_align.index_map()
 
         self.assertTrue(np.array_equal(full_map, [[0, 5], [5, 10], [10, 15],
@@ -727,7 +852,7 @@ class TestIndexMap(unittest.TestCase):
         align2 = Alignment(['DF', 'YA', '-C'], alphabet=protein_alphabet)
 
         align = Alignment(align1).add(align2)
-        bin_align = BinaryAlignment(align)
+        bin_align = BinaryAlignment.from_alignment(align)
         full_map0 = bin_align.index_map()
         full_map = bin_align.index_map(include_gaps=True)
 

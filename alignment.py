@@ -355,9 +355,9 @@ class Alignment(object):
 
         return self
 
-    def to_binary(self):
+    def to_binary(self, include_gaps=False):
         from multicov.binary import BinaryAlignment
-        return BinaryAlignment.from_alignment(self)
+        return BinaryAlignment.from_alignment(self, include_gaps=include_gaps)
 
     def eliminate_similar_sequences(self, threshold, memory_saver=None, no_numba=False):
         """ Trim the alignment by making sure no two sequences are more similar than the given threshold (in terms of
