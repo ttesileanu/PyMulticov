@@ -482,6 +482,20 @@ class TestAdd(unittest.TestCase):
         self.assertEqual(len(align.reference.seqs), 2)
         self.assertSequenceEqual(align.reference.seqs[1], list(range(2)))
 
+    def test_no_convert_num_to_str_add_matrix(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet, NumericAlphabet
+        align = Alignment(['ACCW', 'FFH-', '---D'], protein_alphabet)
+        align.add([[2, 3], [0, 2], [1, 1]], NumericAlphabet(4))
+        self.assertTrue(np.array_equal(align[:, 4:], [[2, 3], [0, 2], [1, 1]]))
+
+    def test_no_convert_num_to_str_add_align(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet, NumericAlphabet
+        align = Alignment(['ACCW', 'FFH-', '---D'], protein_alphabet)
+        align.add(Alignment([[2, 3], [0, 2], [1, 1]], NumericAlphabet(4)))
+        self.assertTrue(np.array_equal(align[:, 4:], [[2, 3], [0, 2], [1, 1]]))
+
 
 class TestAsMatrix(unittest.TestCase):
     def test_empty(self):

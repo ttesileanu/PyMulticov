@@ -14,6 +14,7 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(np.size(bin_align.data), 0)
         self.assertEqual(len(bin_align.alphabets), 0)
         self.assertEqual(len(bin_align.reference), 0)
+        self.assertEqual(bin_align.include_gaps, False)
 
     def test_make_from_matrix(self):
         from multicov.binary import BinaryAlignment
@@ -29,6 +30,7 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(bin_align.alphabets[0][1], 3)
         self.assertEqual(bin_align.reference, ReferenceMapping(list(range(3))))
         self.assertTrue(np.array_equal(bin_align.data.todense(), bin_data))
+        self.assertEqual(bin_align.include_gaps, False)
 
     def test_copy(self):
         from multicov.binary import BinaryAlignment
@@ -147,6 +149,11 @@ class TestComparison(unittest.TestCase):
             [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]], rna_alphabet)
         self.assertTrue(bin_align == bin_align)
         self.assertFalse(bin_align != bin_align)
+
+    def test_unequal_different_include_gaps(self):
+        from multicov.binary import  BinaryAlignment
+        self.assertFalse(BinaryAlignment() == BinaryAlignment(include_gaps=True))
+        self.assertTrue(BinaryAlignment() != BinaryAlignment(include_gaps=True))
 
     def test_unequal_different_alphabets(self):
         from multicov.binary import BinaryAlignment
@@ -513,6 +520,112 @@ class TestFromAlignment(unittest.TestCase):
         self.assertIs(bin_align.reference, align.reference)
         self.assertIs(bin_align.annotations, align.annotations)
 
+    def test_include_gaps(self):
+        from multicov.alignment import Alignment, ReferenceMapping
+        from multicov.alphabet import rna_alphabet, NumericAlphabet
+        from multicov.binary import BinaryAlignment
+        align1 = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        align2 = Alignment([[2, 3], [0, 4], [1, 3]], alphabet=NumericAlphabet(5, has_gap=False))
+
+        align = Alignment(align1).add(align2)
+        align.reference = ReferenceMapping((list(range(1, 4)), list(range(2))))
+        align.annotations['seqw'] = [0.5, 1.5, 0.2]
+
+        bin_align = BinaryAlignment.from_alignment(align, include_gaps=True)
+
+        expected1 = np.asmatrix([[0, 1, 0, 0, 0,  0, 0, 1, 0, 0,  0, 1, 0, 0, 0],
+                                 [0, 0, 0, 1, 0,  0, 0, 0, 0, 1,  0, 1, 0, 0, 0],
+                                 [1, 0, 0, 0, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0]])
+        #                         0  1  2  3  4
+        expected2 = np.asmatrix([[0, 0, 1, 0, 0,
+                                  0, 0, 0, 1, 0],
+                                 [1, 0, 0, 0, 0,
+                                  0, 0, 0, 0, 1],
+                                 [0, 1, 0, 0, 0,
+                                  0, 0, 0, 1, 0]])
+
+        self.assertTrue(bin_align.include_gaps)
+        self.assertSequenceEqual(bin_align.alphabets, [(rna_alphabet, 3), (NumericAlphabet(5, has_gap=False), 2)])
+        self.assertTrue(np.array_equal(bin_align.data.todense(), np.hstack((expected1, expected2))))
+        self.assertIs(bin_align.reference, align.reference)
+        self.assertIs(bin_align.annotations, align.annotations)
+
+
+class TestToAlignment(unittest.TestCase):
+    def test_empty(self):
+        from multicov.alignment import Alignment, ReferenceMapping
+        from multicov.binary import BinaryAlignment
+        align = BinaryAlignment().to_alignment()
+        self.assertEqual(align, Alignment())
+
+    def test_rna_roundtrip(self):
+        from multicov.alignment import Alignment
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import rna_alphabet
+        align = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        bin_align = BinaryAlignment.from_alignment(align)
+        align_again = bin_align.to_alignment()
+        self.assertEqual(align, align_again)
+
+    def test_multi_alpha_roundtrip(self):
+        from multicov.alignment import Alignment, ReferenceMapping
+        from multicov.alphabet import protein_alphabet, rna_alphabet
+        from multicov.binary import BinaryAlignment
+        align1 = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        align2 = Alignment(['DF', 'YA', '-C'], alphabet=protein_alphabet)
+
+        align = Alignment(align1).add(align2)
+        align.reference = ReferenceMapping((list(range(1, 4)), list(range(2))))
+        align.annotations['seqw'] = [0.5, 1.5, 0.2]
+
+        bin_align = BinaryAlignment.from_alignment(align)
+        align_again = bin_align.to_alignment()
+
+        self.assertEqual(align, align_again)
+
+
+class TestIncludeExcludeGaps(unittest.TestCase):
+    def test_include_gaps(self):
+        from multicov.alignment import Alignment, ReferenceMapping
+        from multicov.alphabet import rna_alphabet, NumericAlphabet
+        from multicov.binary import BinaryAlignment
+        align1 = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        align2 = Alignment([[2, 3], [0, 4], [1, 3]], alphabet=NumericAlphabet(5, has_gap=False))
+
+        align = Alignment(align1).add(align2)
+        align.reference = ReferenceMapping((list(range(1, 4)), list(range(2))))
+        align.annotations['seqw'] = [0.5, 1.5, 0.2]
+
+        bin_align = BinaryAlignment.from_alignment(align)
+        bin_align.add_gap_positions()
+
+        expected1 = np.asmatrix([[0, 1, 0, 0, 0,  0, 0, 1, 0, 0,  0, 1, 0, 0, 0],
+                                 [0, 0, 0, 1, 0,  0, 0, 0, 0, 1,  0, 1, 0, 0, 0],
+                                 [1, 0, 0, 0, 0,  0, 1, 0, 0, 0,  1, 0, 0, 0, 0]])
+        #                         0  1  2  3  4
+        expected2 = np.asmatrix([[0, 0, 1, 0, 0,
+                                  0, 0, 0, 1, 0],
+                                 [1, 0, 0, 0, 0,
+                                  0, 0, 0, 0, 1],
+                                 [0, 1, 0, 0, 0,
+                                  0, 0, 0, 1, 0]])
+
+        self.assertTrue(bin_align.include_gaps)
+        self.assertSequenceEqual(bin_align.alphabets, [(rna_alphabet, 3), (NumericAlphabet(5, has_gap=False), 2)])
+        self.assertTrue(np.array_equal(bin_align.data.todense(), np.hstack((expected1, expected2))))
+        self.assertIs(bin_align.reference, align.reference)
+        self.assertIs(bin_align.annotations, align.annotations)
+
+    def test_exclude_gaps(self):
+        from multicov.alignment import Alignment
+        from multicov.binary import BinaryAlignment
+        from multicov.alphabet import rna_alphabet
+        align = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        bin_align1 = BinaryAlignment.from_alignment(align)
+        bin_align2 = BinaryAlignment.from_alignment(align, include_gaps=True)
+        bin_align2.remove_gap_positions()
+        self.assertEqual(bin_align1, bin_align2)
+
 
 class TestGetItem(unittest.TestCase):
     def test_get_str_goes_to_annotations(self):
@@ -591,3 +704,35 @@ class TestIndexMap(unittest.TestCase):
 
         self.assertTrue(np.array_equal(full_map, [[0, 4], [4, 8], [8, 12],
                                                    [12, 32], [32, 52]]))
+
+    def test_include_gaps_from_binalign(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet, rna_alphabet
+        from multicov.binary import BinaryAlignment
+        align1 = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        align2 = Alignment(['DF', 'YA', '-C'], alphabet=protein_alphabet)
+
+        align = Alignment(align1).add(align2)
+        bin_align = BinaryAlignment(align, include_gaps=True)
+        full_map = bin_align.index_map()
+
+        self.assertTrue(np.array_equal(full_map, [[0, 5], [5, 10], [10, 15],
+                                                   [15, 36], [36, 57]]))
+
+    def test_force_include_gaps(self):
+        from multicov.alignment import Alignment
+        from multicov.alphabet import protein_alphabet, rna_alphabet
+        from multicov.binary import BinaryAlignment
+        align1 = Alignment(['ACA', 'GUA', '-A-'], alphabet=rna_alphabet)
+        align2 = Alignment(['DF', 'YA', '-C'], alphabet=protein_alphabet)
+
+        align = Alignment(align1).add(align2)
+        bin_align = BinaryAlignment(align)
+        full_map0 = bin_align.index_map()
+        full_map = bin_align.index_map(include_gaps=True)
+
+        self.assertTrue(np.array_equal(full_map0, [[0, 4], [4, 8], [8, 12],
+                                                  [12, 32], [32, 52]]))
+
+        self.assertTrue(np.array_equal(full_map, [[0, 5], [5, 10], [10, 15],
+                                                   [15, 36], [36, 57]]))

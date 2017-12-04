@@ -155,7 +155,10 @@ class Alignment(object):
                 self.reference = ReferenceMapping(subdata.reference)
                 self.annotations = subdata.annotations.copy()
             else:
-                self.data = np.asmatrix(np.hstack((self.data, subdata.data)))
+                if self.data.dtype == subdata.data.dtype:
+                    self.data = np.asmatrix(np.hstack((self.data, subdata.data)))
+                else:
+                    self.data = np.asmatrix(np.hstack((self.data.astype('object'), subdata.data)))
                 self.alphabets.extend(subdata.alphabets)
                 self.reference.extend(subdata.reference)
         else:
@@ -171,7 +174,10 @@ class Alignment(object):
 
             # update the data
             if len(self) != 0:
-                self.data = np.asmatrix(np.hstack((self.data, data_to_add)))
+                if self.data.dtype == data_to_add.dtype:
+                    self.data = np.asmatrix(np.hstack((self.data, data_to_add)))
+                else:
+                    self.data = np.asmatrix(np.hstack((self.data.astype('object'), data_to_add)))
             else:
                 self.data = data_to_add
                 self.annotations['seqw'] = np.ones(len(self))

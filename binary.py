@@ -9,11 +9,12 @@ import pandas as pd
 
 
 class BinaryAlignment(object):
-    def __init__(self, data=None, alphabet=None):
+    def __init__(self, data=None, alphabet=None, include_gaps=False):
         self.data = sparse.coo_matrix([])
         self.reference = ReferenceMapping()
         self.alphabets = []
         self.annotations = pd.DataFrame({'seqw': []})
+        self.include_gaps = include_gaps
 
         if data is not None:
             self.add(data, alphabet)
@@ -70,17 +71,26 @@ class BinaryAlignment(object):
             return self.data.shape[0]
 
     @classmethod
-    def from_alignment(cls, align):
+    def from_alignment(cls, align, include_gaps=None):
+        """ By default this function does not generate columns for gaps, unless the `align` argument has a member
+        `include_gaps` that is set to `True`.  The `include_gaps` argument can be used to override this behavior. It
+        also overrides any value contained by the `include_gaps` member of `align`, if it exists. """
         result = cls()
 
         if len(align) == 0 or len(align.alphabets) == 0:
             return result
 
+        if include_gaps is None:
+            if hasattr(align, 'include_gaps'):
+                include_gaps = align.include_gaps
+            else:
+                include_gaps = False
+
         start_idx = 0
         bin_blocks = []
         for alpha, alpha_width in align.alphabets:
             subdata = align.data[:, start_idx:start_idx+alpha_width]
-            bin_subdata = _make_binary_from_mat(subdata, alpha)
+            bin_subdata = _make_binary_from_mat(subdata, alpha, include_gaps)
             bin_blocks.append(bin_subdata)
             start_idx += alpha_width
 
@@ -88,6 +98,7 @@ class BinaryAlignment(object):
         result.reference = align.reference
         result.alphabets = align.alphabets
         result.annotations = align.annotations
+        result.include_gaps = include_gaps
 
         return result
 
@@ -99,6 +110,8 @@ class BinaryAlignment(object):
             return False
 
         if np.shape(self.data) != np.shape(other.data):
+            return False
+        if self.include_gaps != other.include_gaps:
             return False
         if np.size(self.data) > 0:
             my_data = sparse.csr_matrix(self.data)
@@ -133,24 +146,75 @@ class BinaryAlignment(object):
         else:
             raise IndexError('Trying to index BinaryAlignment by non-string argument.')
 
-    def index_map(self, idx=None):
+    def index_map(self, idx=None, include_gaps=None):
         """ Map indices from character alignments to the corresponding ranges in the binary alignment.
 
         If `idx` is not given, a full map is returned as an Nx2 array, such that `map[i]` is the binary index range for
         position `i`.
         If `idx` is given, only the contents of `map[idx]` are returned. Generating the full map is likely faster than
         looping over the index. """
-        return binary_index_map(self, idx)
+        return binary_index_map(self, idx, include_gaps=include_gaps)
+
+    def add_gap_positions(self):
+        """ Add columns for gaps, and set `include_gaps` to `True`. If `include_gaps` is already `True`, this function
+        does nothing.
+
+        Returns `self`. """
+        if self.include_gaps:
+            return self
+
+        # XXX this is a pretty dumb way to do it
+        align = self.to_alignment()
+        self.data = BinaryAlignment.from_alignment(align, include_gaps=True).data
+
+        self.include_gaps = True
+
+    def remove_gap_positions(self):
+        """ Remove columns for gaps, and set `include_gaps` to `False`. If `include_gaps` is already `False`, this
+        functions does nothing.
+
+        Returns `self`. """
+        if not self.include_gaps:
+            return self
+
+        # XXX this is a pretty dumb way to do it
+        align = self.to_alignment()
+        self.data = BinaryAlignment.from_alignment(align).data
+
+        self.include_gaps = False
+
+    def to_alignment(self):
+        # _binary_mat_to_char_mat(m, alphabet, include_gaps):
+        from multicov.alignment import Alignment
+        res = Alignment()
+
+        # transform the data
+        crt_idx = 0
+        m_all = np.asarray(self.data.todense())
+        for alphabet, alphawidth in self.alphabets:
+            nletts = len(alphabet.letters(no_gap=(not self.include_gaps)))
+            width = alphawidth*nletts
+
+            m = m_all[:, crt_idx:crt_idx+width]
+            res.add(_binary_mat_to_char_mat(m, alphabet, self.include_gaps), alphabet)
+
+            crt_idx += width
+
+        # copy reference mapping, annotations
+        res.reference = self.reference
+        res.annotations = self.annotations
+
+        return res
 
 
-def _make_binary_from_mat(m, alphabet):
+def _make_binary_from_mat(m, alphabet, include_gaps):
     """ Create a sparse binary alignment matrix from the given dense matrix, using the given alphabet. Gaps are
     represented as all zeros. """
 
     # this is about 30% slower than the Matlab version; maybe it's better to do it like in Matlab, where the binary
     # alignment is first created as a dense matrix, and then sparsified?
 
-    letters = alphabet.letters(no_gap=True)
+    letters = alphabet.letters(no_gap=(not include_gaps))
     nletts = len(letters)
     # XXX maybe try to use normal lists here instead of arrays? they should be more efficient at resizing
     i_list = np.array([])
@@ -166,7 +230,23 @@ def _make_binary_from_mat(m, alphabet):
     return sparse.coo_matrix((data, (i_list, j_list)), shape=(n, l*nletts))
 
 
-def binary_index_map(align, idx=None):
+def _binary_mat_to_char_mat(m, alphabet, include_gaps):
+    """ Convert a binary alignment matrix (in dense format) to the corresponding character alignment in the given
+    alphabet, assuming gaps were or were not included (according to `include_gaps`). """
+    letters = alphabet.letters(no_gap=(not include_gaps))
+    nletts = len(letters)
+    m_3d = np.reshape(m, (m.shape[0], -1, nletts))
+    if include_gaps or not alphabet.has_gap:
+        m_3d_num = np.argmax(m_3d, axis=2)
+    else:
+        m_3d_num_no_gap = np.argmax(m_3d, axis=2) + 1
+        m_3d_nongap_mask = np.any((m_3d > 0), axis=2)
+        m_3d_num = m_3d_num_no_gap * m_3d_nongap_mask
+
+    return alphabet.from_int(m_3d_num.astype(int))
+
+
+def binary_index_map(align, idx=None, include_gaps=None):
     """ Map indices from character alignments to the corresponding slices in the binary alignment.
 
     If `idx` is not given, a full map is returned as an Nx2 array, such that `map[i]` is the binary index range for
@@ -174,7 +254,11 @@ def binary_index_map(align, idx=None):
     If `idx` is given, only the contents of `map[idx]` are returned. Generating the full map is likely faster than
     looping over the index.
 
-    The first argument can be any object that has an `alphabets` field. """
+    The first argument can be any object that has an `alphabets` field.
+
+    By default this function does not generate indices for gaps, unless the first argument has a member `include_gaps`
+    that is set to `True`.  The `include_gaps` argument can be used to override this behavior. It also overrides any
+    value contained by the `include_gaps` member of `align`, if it exists. """
     alphabets = align.alphabets
     if len(alphabets) == 0:
         if idx is not None:
@@ -182,17 +266,23 @@ def binary_index_map(align, idx=None):
         else:
             return []
 
+    if include_gaps is None:
+        if hasattr(align, 'include_gaps'):
+            include_gaps = align.include_gaps
+        else:
+            include_gaps = False
+
     widths = np.asarray([_[1] for _ in alphabets])
     start_idxs = np.hstack(([0], np.cumsum(widths)))
 
-    bin_widths = np.asarray([width*alphabet.size(no_gap=True) for alphabet, width in alphabets])
+    bin_widths = np.asarray([width*alphabet.size(no_gap=(not include_gaps)) for alphabet, width in alphabets])
     start_bin_idxs = np.hstack(([0], np.cumsum(bin_widths)))
     if idx is not None:
         if idx < 0 or idx >= start_idxs[-1]:
             raise IndexError('index_map called with out-of-range index.')
         alpha_idx = (idx >= start_idxs).nonzero()[0][-1]
         alpha_loc = idx - start_idxs[alpha_idx]
-        alpha_len = alphabets[alpha_idx][0].size(no_gap=True)
+        alpha_len = alphabets[alpha_idx][0].size(no_gap=(not include_gaps))
         start_bin_idx = start_bin_idxs[alpha_idx] + alpha_loc*alpha_len
         end_bin_idx = start_bin_idx + alpha_len
         return (start_bin_idx, end_bin_idx)
@@ -201,7 +291,7 @@ def binary_index_map(align, idx=None):
         full_map = np.zeros((width, 2), dtype=int)
         crt_map_row = 0
         for start_bin_idx, alpha_info in zip(start_bin_idxs, alphabets):
-            alpha_len = alpha_info[0].size(no_gap=True)
+            alpha_len = alpha_info[0].size(no_gap=(not include_gaps))
             alpha_width = alpha_info[1]
             crt_rows = slice(crt_map_row, crt_map_row + alpha_width)
             full_map[crt_rows, 0] = start_bin_idx + np.arange(alpha_width, dtype=int)*alpha_len
