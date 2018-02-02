@@ -1,6 +1,6 @@
 """ Define input-output routines for alignments. """
 
-from multicov.alignment import Alignment, ReferenceMapping
+from .alignment import Alignment, ReferenceMapping
 
 import numpy as np
 
@@ -106,7 +106,7 @@ def load_fasta(fname, alphabet, strip_ws_in_annot=True, invalid_letter_policy='u
 
 
 def _name_to_alpha(name):
-    from multicov.alphabet import protein_alphabet, dna_alphabet, rna_alphabet, NumericAlphabet
+    from .alphabet import protein_alphabet, dna_alphabet, rna_alphabet, NumericAlphabet
     if name == 'protein':
         return protein_alphabet
     elif name == 'dna':

@@ -5,7 +5,7 @@ import numpy as np
 
 from scipy import sparse
 
-from multicov.binary import binary_index_map
+from .binary import binary_index_map
 
 
 # noinspection SpellCheckingInspection
@@ -251,7 +251,7 @@ class MaxentModel(object):
             else:
                 input_type = 'matrix'
 
-            from multicov.alignment import Alignment
+            from .alignment import Alignment
 
             crt_idx = 0
             align = Alignment()

@@ -1,6 +1,6 @@
 """ This file defines the alignment class, as well as a reference mapping object. """
 
-from multicov.alphabet import NumericAlphabet
+from .alphabet import NumericAlphabet
 
 import numpy as np
 import pandas as pd
@@ -356,7 +356,7 @@ class Alignment(object):
         return self
 
     def to_binary(self, include_gaps=False):
-        from multicov.binary import BinaryAlignment
+        from .binary import BinaryAlignment
         return BinaryAlignment.from_alignment(self, include_gaps=include_gaps)
 
     def eliminate_similar_sequences(self, threshold, memory_saver=None, no_numba=False):
@@ -383,6 +383,7 @@ class Alignment(object):
             memory_saver = not no_numba
 
         from scipy import sparse
+        from scipy.sparse import csgraph
         if not memory_saver:
             seq_dists = distance.pdist(self.to_int(as_matrix=True), 'hamming')
             adjacency_matrix = sparse.csr_matrix((distance.squareform(seq_dists) < (1 - threshold)))
@@ -394,7 +395,7 @@ class Alignment(object):
             adjacency_matrix = sparse.csr_matrix((np.ones(len(inds[0]), dtype=bool), inds), shape=(n_seq, n_seq))
 
         # find connect components
-        n_seq_comps, seq_labels = sparse.csgraph.connected_components(adjacency_matrix, directed=False)
+        n_seq_comps, seq_labels = csgraph.connected_components(adjacency_matrix, directed=False)
 
         # choose representatives
         trimmed_seqs = []

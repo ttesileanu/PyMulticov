@@ -1,6 +1,6 @@
 """ This file defines the binary alignment class. """
 
-from multicov.alignment import ReferenceMapping
+from .alignment import ReferenceMapping
 
 from scipy import sparse
 
@@ -202,7 +202,7 @@ class BinaryAlignment(object):
 
     def to_alignment(self):
         # _binary_mat_to_char_mat(m, alphabet, include_gaps):
-        from multicov.alignment import Alignment
+        from .alignment import Alignment
         res = Alignment()
 
         # transform the data

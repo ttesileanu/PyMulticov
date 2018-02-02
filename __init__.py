@@ -1,22 +1,19 @@
-from multicov import align_io
-from multicov import alignment
-from multicov import alphabet
-from multicov import binary
-from multicov import filtering
-from multicov import statistics
+from . import align_io
+from . import alignment
+from . import alphabet
+from . import binary
+from . import filtering
+from . import statistics
 
 # noinspection PyUnresolvedReferences
-from multicov.align_io import *
+from .align_io import *
 # noinspection PyUnresolvedReferences
-from multicov.alignment import *
+from .alignment import *
 # noinspection PyUnresolvedReferences
-from multicov.alphabet import *
+from .alphabet import *
 # noinspection PyUnresolvedReferences
-from multicov.binary import *
+from .binary import *
 # noinspection PyUnresolvedReferences
-from multicov.filtering import *
+from .filtering import *
 # noinspection PyUnresolvedReferences
-from multicov.statistics import *
-
-__package__ = 'multicov'
-__all__ = ['alphabet', 'alignment', 'binary', 'align_io', 'filtering', 'statistics']
+from .statistics import *
